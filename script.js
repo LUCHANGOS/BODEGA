@@ -226,6 +226,14 @@ function showDashboard() {
     // Configurar UI según el rol
     if (APP_STATE.currentUser.role === 'admin') {
         document.body.classList.add('admin');
+        
+        // Solo Zaida puede ver el tab de autorización
+        const authTab = document.querySelector('[data-tab="autorizar"]');
+        if (APP_STATE.currentUser.username === 'zaida') {
+            authTab.style.display = 'block';
+        } else {
+            authTab.style.display = 'none';
+        }
     }
     
     document.getElementById('user-name').textContent = APP_STATE.currentUser.name;
@@ -257,7 +265,12 @@ function showTab(tabName) {
             loadInventory();
             break;
         case 'autorizar':
-            loadPendingRequests();
+            // Solo Zaida puede acceder a la autorización
+            if (APP_STATE.currentUser.username === 'zaida') {
+                loadPendingRequests();
+            } else {
+                showTab('solicitar'); // Redirigir a solicitar si no es Zaida
+            }
             break;
         case 'entradas':
             loadRecentEntries();
@@ -1448,14 +1461,20 @@ function generateDeliveryVoucher(request) {
 
 // Notificaciones
 function updateNotifications() {
-    if (APP_STATE.currentUser && APP_STATE.currentUser.role === 'admin') {
+    // Solo Zaida puede ver notificaciones de solicitudes pendientes
+    if (APP_STATE.currentUser && APP_STATE.currentUser.role === 'admin' && APP_STATE.currentUser.username === 'zaida') {
         const pendingCount = DATABASE.requests.filter(r => r.status === 'pending').length;
         document.getElementById('notification-count').textContent = pendingCount;
         document.getElementById('pending-badge').textContent = pendingCount;
         
         if (pendingCount > 0) {
             document.getElementById('notifications').style.display = 'block';
+        } else {
+            document.getElementById('notifications').style.display = 'none';
         }
+    } else {
+        // Otros usuarios no ven notificaciones
+        document.getElementById('notifications').style.display = 'none';
     }
 }
 
