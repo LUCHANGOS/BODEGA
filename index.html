@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Control de Bodega - L.A.N.G.</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="retiro-styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -268,6 +269,134 @@
                     <i class="fas fa-clipboard-list"></i>
                     <h3>Historial Solicitudes</h3>
                 </button>
+                <button class="report-card" onclick="showRetiroUsuario()">
+                    <i class="fas fa-user-minus"></i>
+                    <h3>Retiro por Usuario</h3>
+                </button>
+                <button class="report-card" onclick="showRetiroProyecto()">
+                    <i class="fas fa-project-diagram"></i>
+                    <h3>Retiro por Proyecto</h3>
+                </button>
+                <button class="report-card" onclick="showHistorialSolicitudes()">
+                    <i class="fas fa-history"></i>
+                    <h3>Ver Historial</h3>
+                </button>
+            </div>
+            
+            <!-- Retiro por Usuario -->
+            <div id="retiro-usuario" class="form-section hidden">
+                <div class="form-header">
+                    <h3><i class="fas fa-user"></i> Retiro por Usuario</h3>
+                    <button class="btn btn-secondary" onclick="hideRetiroForms()">Cancelar</button>
+                </div>
+                
+                <div class="retiro-search">
+                    <input type="text" id="user-search" placeholder="Buscar usuario por nombre...">
+                    <div id="user-search-results" class="search-results"></div>
+                </div>
+                
+                <div class="retiro-form">
+                    <div class="form-group">
+                        <label>Usuario Seleccionado:</label>
+                        <input type="text" id="selected-user" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Producto (Código o Escanear):</label>
+                        <div class="scan-input-group">
+                            <input type="text" id="retiro-product" placeholder="Código del producto">
+                            <button class="btn btn-primary" id="scan-retiro-product">
+                                <i class="fas fa-qrcode"></i>
+                            </button>
+                        </div>
+                        <div id="retiro-product-info" class="product-info-display"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Cantidad:</label>
+                        <input type="number" id="retiro-quantity" min="1" value="1">
+                    </div>
+                    
+                    <button class="btn btn-success" id="process-user-retiro">
+                        <i class="fas fa-check"></i> Procesar Retiro
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Retiro por Proyecto -->
+            <div id="retiro-proyecto" class="form-section hidden">
+                <div class="form-header">
+                    <h3><i class="fas fa-project-diagram"></i> Retiro por Proyecto</h3>
+                    <button class="btn btn-secondary" onclick="hideRetiroForms()">Cancelar</button>
+                </div>
+                
+                <div class="retiro-form">
+                    <div class="form-group">
+                        <label>Nombre del Proyecto:</label>
+                        <input type="text" id="proyecto-name" placeholder="Nombre del proyecto" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Código CECO:</label>
+                        <input type="text" id="proyecto-ceco" placeholder="Código CECO" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Responsable del Proyecto:</label>
+                        <input type="text" id="proyecto-responsable" placeholder="Nombre del responsable" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Producto (Código o Escanear):</label>
+                        <div class="scan-input-group">
+                            <input type="text" id="proyecto-product" placeholder="Código del producto">
+                            <button class="btn btn-primary" id="scan-proyecto-product">
+                                <i class="fas fa-qrcode"></i>
+                            </button>
+                        </div>
+                        <div id="proyecto-product-info" class="product-info-display"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Cantidad:</label>
+                        <input type="number" id="proyecto-quantity" min="1" value="1">
+                    </div>
+                    
+                    <button class="btn btn-success" id="process-proyecto-retiro">
+                        <i class="fas fa-check"></i> Procesar Retiro
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Historial de Solicitudes -->
+            <div id="historial-solicitudes" class="form-section hidden">
+                <div class="form-header">
+                    <h3><i class="fas fa-history"></i> Historial de Solicitudes</h3>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="refreshHistorial()">
+                            <i class="fas fa-refresh"></i> Actualizar
+                        </button>
+                        <button class="btn btn-secondary" onclick="hideRetiroForms()">Cerrar</button>
+                    </div>
+                </div>
+                
+                <div class="historial-filters">
+                    <select id="status-filter">
+                        <option value="all">Todos los estados</option>
+                        <option value="pending">Pendientes</option>
+                        <option value="approved">Aprobadas</option>
+                        <option value="rejected">Rechazadas</option>
+                    </select>
+                    
+                    <select id="user-filter">
+                        <option value="all">Todos los usuarios</option>
+                    </select>
+                    
+                    <input type="date" id="date-from" title="Fecha desde">
+                    <input type="date" id="date-to" title="Fecha hasta">
+                </div>
+                
+                <div id="historial-list" class="historial-container"></div>
             </div>
         </div>
 

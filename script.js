@@ -326,6 +326,19 @@ function setupEventListeners() {
     document.getElementById('confirm-yes').addEventListener('click', handleConfirmYes);
     document.getElementById('confirm-no').addEventListener('click', closeModal);
     document.getElementById('apply-stock-adjust').addEventListener('click', applyStockAdjustment);
+    
+    // Retiros y historial
+    document.getElementById('user-search').addEventListener('input', searchUsers);
+    document.getElementById('retiro-product').addEventListener('input', handleRetiroProductSearch);
+    document.getElementById('proyecto-product').addEventListener('input', handleProyectoProductSearch);
+    document.getElementById('scan-retiro-product').addEventListener('click', () => openScanner(handleRetiroProductScan));
+    document.getElementById('scan-proyecto-product').addEventListener('click', () => openScanner(handleProyectoProductScan));
+    document.getElementById('process-user-retiro').addEventListener('click', processUserRetiro);
+    document.getElementById('process-proyecto-retiro').addEventListener('click', processProyectoRetiro);
+    document.getElementById('status-filter').addEventListener('change', filterHistorial);
+    document.getElementById('user-filter').addEventListener('change', filterHistorial);
+    document.getElementById('date-from').addEventListener('change', filterHistorial);
+    document.getElementById('date-to').addEventListener('change', filterHistorial);
 }
 
 // Autenticación
@@ -1059,6 +1072,203 @@ function generateReport(reportType) {
     }
 }
 
+// Reportes faltantes
+function generateUserWithdrawalsReport() {
+    const approvedRequests = DATABASE.requests.filter(r => r.status === 'approved' && r.products.length > 0);
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    doc.setFontSize(16);
+    doc.text('Reporte de Retiros por Usuario', 20, 20);
+    
+    doc.setFontSize(12);
+    let y = 40;
+    
+    // Agrupar por usuario
+    const userGroups = {};
+    approvedRequests.forEach(request => {
+        if (!userGroups[request.userName]) {
+            userGroups[request.userName] = [];
+        }
+        userGroups[request.userName].push(request);
+    });
+    
+    Object.keys(userGroups).forEach(userName => {
+        if (y > 240) {
+            doc.addPage();
+            y = 20;
+        }
+        
+        doc.setFontSize(14);
+        doc.text(`USUARIO: ${userName}`, 20, y);
+        y += 10;
+        
+        doc.setFontSize(10);
+        userGroups[userName].forEach(request => {
+            if (y > 250) {
+                doc.addPage();
+                y = 20;
+            }
+            
+            doc.text(`Solicitud #${request.id} - ${formatDateTime(request.approvedAt)}`, 25, y);
+            y += 7;
+            
+            request.products.forEach(product => {
+                if (y > 250) {
+                    doc.addPage();
+                    y = 20;
+                }
+                doc.text(`  • ${product.code} - ${product.name}: ${product.quantity} ${product.unit}`, 30, y);
+                y += 5;
+            });
+            y += 3;
+        });
+        y += 10;
+    });
+    
+    if (Object.keys(userGroups).length === 0) {
+        doc.text('No hay retiros registrados', 20, 40);
+    }
+    
+    doc.save('reporte-retiros-usuario.pdf');
+}
+
+function generateProjectWithdrawalsReport() {
+    const projectRequests = DATABASE.requests.filter(r => 
+        r.status === 'approved' && r.requestType === 'proyecto' && r.products.length > 0
+    );
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    doc.setFontSize(16);
+    doc.text('Reporte de Retiros por Proyecto', 20, 20);
+    
+    doc.setFontSize(12);
+    let y = 40;
+    
+    if (projectRequests.length === 0) {
+        doc.text('No hay retiros por proyecto registrados', 20, 40);
+    } else {
+        // Agrupar por proyecto
+        const projectGroups = {};
+        projectRequests.forEach(request => {
+            const projectKey = `${request.projectName} (${request.projectCECO})`;
+            if (!projectGroups[projectKey]) {
+                projectGroups[projectKey] = [];
+            }
+            projectGroups[projectKey].push(request);
+        });
+        
+        Object.keys(projectGroups).forEach(projectKey => {
+            if (y > 240) {
+                doc.addPage();
+                y = 20;
+            }
+            
+            doc.setFontSize(14);
+            doc.text(`PROYECTO: ${projectKey}`, 20, y);
+            y += 10;
+            
+            doc.setFontSize(10);
+            projectGroups[projectKey].forEach(request => {
+                if (y > 250) {
+                    doc.addPage();
+                    y = 20;
+                }
+                
+                doc.text(`Solicitante: ${request.userName} - ${formatDateTime(request.approvedAt)}`, 25, y);
+                y += 7;
+                
+                request.products.forEach(product => {
+                    if (y > 250) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    doc.text(`  • ${product.code} - ${product.name}: ${product.quantity} ${product.unit}`, 30, y);
+                    y += 5;
+                });
+                y += 3;
+            });
+            y += 10;
+        });
+    }
+    
+    doc.save('reporte-retiros-proyecto.pdf');
+}
+
+function generateRequestsReport() {
+    const allRequests = DATABASE.requests.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    doc.setFontSize(16);
+    doc.text('Historial de Solicitudes', 20, 20);
+    
+    doc.setFontSize(12);
+    let y = 40;
+    
+    if (allRequests.length === 0) {
+        doc.text('No hay solicitudes registradas', 20, 40);
+    } else {
+        allRequests.forEach(request => {
+            if (y > 240) {
+                doc.addPage();
+                y = 20;
+            }
+            
+            doc.setFontSize(12);
+            doc.text(`Solicitud #${request.id}`, 20, y);
+            
+            doc.setFontSize(10);
+            doc.text(`Solicitante: ${request.userName}`, 20, y + 7);
+            doc.text(`Estado: ${request.status.toUpperCase()}`, 20, y + 14);
+            doc.text(`Tipo: ${request.type.toUpperCase()}`, 20, y + 21);
+            doc.text(`Fecha: ${formatDateTime(request.createdAt)}`, 100, y + 7);
+            
+            if (request.projectName) {
+                doc.text(`Proyecto: ${request.projectName} (${request.projectCECO})`, 100, y + 14);
+            }
+            
+            if (request.status === 'approved') {
+                doc.text(`Aprobado: ${formatDateTime(request.approvedAt)}`, 100, y + 21);
+                doc.text(`Por: ${request.approvedBy}`, 100, y + 28);
+            } else if (request.status === 'rejected') {
+                doc.text(`Rechazado: ${formatDateTime(request.rejectedAt)}`, 100, y + 21);
+                doc.text(`Por: ${request.rejectedBy}`, 100, y + 28);
+            }
+            
+            y += 35;
+            
+            if (request.products && request.products.length > 0) {
+                doc.text('Productos:', 25, y);
+                y += 7;
+                
+                request.products.forEach(product => {
+                    if (y > 250) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    doc.text(`• ${product.code} - ${product.name}: ${product.quantity} ${product.unit}`, 30, y);
+                    y += 5;
+                });
+            }
+            
+            if (request.file) {
+                doc.text(`Archivo: ${request.file.name}`, 25, y);
+                y += 7;
+            }
+            
+            doc.line(20, y + 5, 190, y + 5);
+            y += 15;
+        });
+    }
+    
+    doc.save('reporte-historial-solicitudes.pdf');
+}
+
 function generateEntriesReport() {
     const entries = DATABASE.entries.sort((a, b) => new Date(b.enteredAt) - new Date(a.enteredAt));
     
@@ -1648,5 +1858,431 @@ function addInventoryEditButtons() {
                 item.insertAdjacentHTML('beforeend', actionsHtml);
             }
         });
+    }
+}
+
+// ============ FUNCIONES DE RETIROS Y HISTORIAL ============
+
+// Mostrar formulario de retiro por usuario
+function showRetiroUsuario() {
+    hideRetiroForms();
+    document.getElementById('retiro-usuario').classList.remove('hidden');
+    clearRetiroUsuarioForm();
+}
+
+// Mostrar formulario de retiro por proyecto
+function showRetiroProyecto() {
+    hideRetiroForms();
+    document.getElementById('retiro-proyecto').classList.remove('hidden');
+    clearRetiroProyectoForm();
+}
+
+// Mostrar historial de solicitudes
+function showHistorialSolicitudes() {
+    hideRetiroForms();
+    document.getElementById('historial-solicitudes').classList.remove('hidden');
+    setupHistorialFilters();
+    refreshHistorial();
+}
+
+// Ocultar todos los formularios de retiro
+function hideRetiroForms() {
+    document.getElementById('retiro-usuario').classList.add('hidden');
+    document.getElementById('retiro-proyecto').classList.add('hidden');
+    document.getElementById('historial-solicitudes').classList.add('hidden');
+}
+
+// Limpiar formularios
+function clearRetiroUsuarioForm() {
+    document.getElementById('user-search').value = '';
+    document.getElementById('selected-user').value = '';
+    document.getElementById('retiro-product').value = '';
+    document.getElementById('retiro-quantity').value = '1';
+    document.getElementById('retiro-product-info').innerHTML = '';
+    document.getElementById('user-search-results').innerHTML = '';
+}
+
+function clearRetiroProyectoForm() {
+    document.getElementById('proyecto-name').value = '';
+    document.getElementById('proyecto-ceco').value = '';
+    document.getElementById('proyecto-responsable').value = '';
+    document.getElementById('proyecto-product').value = '';
+    document.getElementById('proyecto-quantity').value = '1';
+    document.getElementById('proyecto-product-info').innerHTML = '';
+}
+
+// Búsqueda de usuarios
+function searchUsers(e) {
+    const query = e.target.value.toLowerCase();
+    const results = document.getElementById('user-search-results');
+    
+    if (query.length < 2) {
+        results.innerHTML = '';
+        return;
+    }
+    
+    const matches = Object.entries(USERS).filter(([email, user]) => 
+        user.name.toLowerCase().includes(query) || email.toLowerCase().includes(query)
+    ).map(([email, user]) => ({ email, ...user }));
+    
+    displayUserResults(matches);
+}
+
+function displayUserResults(users) {
+    const resultsContainer = document.getElementById('user-search-results');
+    
+    if (users.length === 0) {
+        resultsContainer.innerHTML = '<div class="search-result-item">No se encontraron usuarios</div>';
+        return;
+    }
+    
+    resultsContainer.innerHTML = users.map(user => `
+        <div class="search-result-item" onclick="selectUser('${user.email}', '${user.name}')">
+            <div class="user-info">
+                <h4>${user.name}</h4>
+                <small>${user.email} - ${user.role.toUpperCase()}</small>
+            </div>
+        </div>
+    `).join('');
+}
+
+function selectUser(email, name) {
+    document.getElementById('selected-user').value = name;
+    document.getElementById('user-search').value = '';
+    document.getElementById('user-search-results').innerHTML = '';
+    APP_STATE.selectedUserEmail = email;
+}
+
+// Manejo de productos para retiros
+function handleRetiroProductSearch(e) {
+    const code = e.target.value;
+    displayProductInfo(code, 'retiro-product-info');
+}
+
+function handleProyectoProductSearch(e) {
+    const code = e.target.value;
+    displayProductInfo(code, 'proyecto-product-info');
+}
+
+function displayProductInfo(code, containerId) {
+    const container = document.getElementById(containerId);
+    
+    if (!code || code.length < 2) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    const product = DATABASE.products.find(p => 
+        p.code.toLowerCase().includes(code.toLowerCase()) || 
+        p.barcode === code
+    );
+    
+    if (product) {
+        const stockStatus = product.stock <= product.minStock ? 'stock-low' : 'stock-ok';
+        container.innerHTML = `
+            <div class="product-info-card">
+                <h4>${product.code} - ${product.name}</h4>
+                <p><strong>Descripción:</strong> ${product.description}</p>
+                <p><strong>Stock disponible:</strong> <span class="${stockStatus}">${product.stock} ${product.unit}</span></p>
+                <p><strong>Ubicación:</strong> ${product.location}</p>
+            </div>
+        `;
+    } else {
+        container.innerHTML = '<div class="product-info-card error">Producto no encontrado</div>';
+    }
+}
+
+// Escáner de productos para retiros
+function handleRetiroProductScan(code) {
+    document.getElementById('retiro-product').value = code;
+    displayProductInfo(code, 'retiro-product-info');
+    showToast('Producto escaneado', 'success');
+}
+
+function handleProyectoProductScan(code) {
+    document.getElementById('proyecto-product').value = code;
+    displayProductInfo(code, 'proyecto-product-info');
+    showToast('Producto escaneado', 'success');
+}
+
+// Procesar retiros
+function processUserRetiro() {
+    const userName = document.getElementById('selected-user').value;
+    const userEmail = APP_STATE.selectedUserEmail;
+    const productCode = document.getElementById('retiro-product').value;
+    const quantity = parseInt(document.getElementById('retiro-quantity').value);
+    
+    if (!userName || !productCode || !quantity) {
+        showToast('Complete todos los campos', 'error');
+        return;
+    }
+    
+    const product = DATABASE.products.find(p => p.code === productCode || p.barcode === productCode);
+    if (!product) {
+        showToast('Producto no encontrado', 'error');
+        return;
+    }
+    
+    if (product.stock < quantity) {
+        showToast('Stock insuficiente', 'error');
+        return;
+    }
+    
+    // Crear solicitud automática aprobada
+    const request = {
+        id: generateId(),
+        userId: userEmail,
+        userName: userName,
+        type: 'manual',
+        requestType: 'individual',
+        projectName: null,
+        projectCECO: null,
+        products: [{
+            id: product.id,
+            code: product.code,
+            name: product.name,
+            quantity: quantity,
+            unit: product.unit
+        }],
+        status: 'approved',
+        createdAt: new Date().toISOString(),
+        approvedAt: new Date().toISOString(),
+        approvedBy: APP_STATE.currentUser.name,
+        file: null
+    };
+    
+    // Descontar stock
+    product.stock -= quantity;
+    
+    // Registrar solicitud y entrega
+    DATABASE.requests.push(request);
+    DATABASE.deliveries.push({
+        id: generateId(),
+        requestId: request.id,
+        deliveredBy: APP_STATE.currentUser.name,
+        deliveredAt: new Date().toISOString(),
+        products: request.products
+    });
+    
+    saveData();
+    showToast(`Retiro procesado: ${quantity} ${product.unit} de ${product.name} para ${userName}`, 'success');
+    
+    // Generar PDF de vale
+    generateDeliveryVoucher(request);
+    
+    // Limpiar formulario
+    clearRetiroUsuarioForm();
+    
+    // Refrescar inventario si está activo
+    if (APP_STATE.currentTab === 'inventario') {
+        loadInventory();
+    }
+}
+
+function processProyectoRetiro() {
+    const projectName = document.getElementById('proyecto-name').value;
+    const projectCECO = document.getElementById('proyecto-ceco').value;
+    const responsable = document.getElementById('proyecto-responsable').value;
+    const productCode = document.getElementById('proyecto-product').value;
+    const quantity = parseInt(document.getElementById('proyecto-quantity').value);
+    
+    if (!projectName || !projectCECO || !responsable || !productCode || !quantity) {
+        showToast('Complete todos los campos', 'error');
+        return;
+    }
+    
+    const product = DATABASE.products.find(p => p.code === productCode || p.barcode === productCode);
+    if (!product) {
+        showToast('Producto no encontrado', 'error');
+        return;
+    }
+    
+    if (product.stock < quantity) {
+        showToast('Stock insuficiente', 'error');
+        return;
+    }
+    
+    // Crear solicitud automática aprobada
+    const request = {
+        id: generateId(),
+        userId: 'admin@lang.com', // Admin como solicitante para proyectos
+        userName: responsable,
+        type: 'manual',
+        requestType: 'proyecto',
+        projectName: projectName,
+        projectCECO: projectCECO,
+        products: [{
+            id: product.id,
+            code: product.code,
+            name: product.name,
+            quantity: quantity,
+            unit: product.unit
+        }],
+        status: 'approved',
+        createdAt: new Date().toISOString(),
+        approvedAt: new Date().toISOString(),
+        approvedBy: APP_STATE.currentUser.name,
+        file: null
+    };
+    
+    // Descontar stock
+    product.stock -= quantity;
+    
+    // Registrar solicitud y entrega
+    DATABASE.requests.push(request);
+    DATABASE.deliveries.push({
+        id: generateId(),
+        requestId: request.id,
+        deliveredBy: APP_STATE.currentUser.name,
+        deliveredAt: new Date().toISOString(),
+        products: request.products
+    });
+    
+    saveData();
+    showToast(`Retiro procesado: ${quantity} ${product.unit} de ${product.name} para proyecto ${projectName}`, 'success');
+    
+    // Generar PDF de vale
+    generateDeliveryVoucher(request);
+    
+    // Limpiar formulario
+    clearRetiroProyectoForm();
+    
+    // Refrescar inventario si está activo
+    if (APP_STATE.currentTab === 'inventario') {
+        loadInventory();
+    }
+}
+
+// Historial de solicitudes
+function setupHistorialFilters() {
+    const userFilter = document.getElementById('user-filter');
+    
+    // Poblar filtro de usuarios
+    const uniqueUsers = [...new Set(DATABASE.requests.map(r => r.userName))];
+    userFilter.innerHTML = '<option value="all">Todos los usuarios</option>' +
+        uniqueUsers.map(user => `<option value="${user}">${user}</option>`).join('');
+}
+
+function refreshHistorial() {
+    filterHistorial();
+}
+
+function filterHistorial() {
+    const statusFilter = document.getElementById('status-filter').value;
+    const userFilter = document.getElementById('user-filter').value;
+    const dateFrom = document.getElementById('date-from').value;
+    const dateTo = document.getElementById('date-to').value;
+    
+    let filteredRequests = DATABASE.requests;
+    
+    // Filtrar por estado
+    if (statusFilter !== 'all') {
+        filteredRequests = filteredRequests.filter(r => r.status === statusFilter);
+    }
+    
+    // Filtrar por usuario
+    if (userFilter !== 'all') {
+        filteredRequests = filteredRequests.filter(r => r.userName === userFilter);
+    }
+    
+    // Filtrar por fecha
+    if (dateFrom) {
+        const fromDate = new Date(dateFrom);
+        filteredRequests = filteredRequests.filter(r => new Date(r.createdAt) >= fromDate);
+    }
+    
+    if (dateTo) {
+        const toDate = new Date(dateTo);
+        toDate.setHours(23, 59, 59); // Incluir todo el día
+        filteredRequests = filteredRequests.filter(r => new Date(r.createdAt) <= toDate);
+    }
+    
+    // Ordenar por fecha (más reciente primero)
+    filteredRequests.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    
+    displayHistorial(filteredRequests);
+}
+
+function displayHistorial(requests) {
+    const container = document.getElementById('historial-list');
+    
+    if (requests.length === 0) {
+        container.innerHTML = '<p>No se encontraron solicitudes con los filtros aplicados</p>';
+        return;
+    }
+    
+    container.innerHTML = requests.map(request => {
+        const statusClass = {
+            pending: 'status-pending',
+            approved: 'status-approved', 
+            rejected: 'status-rejected'
+        }[request.status] || '';
+        
+        return `
+            <div class="historial-item ${statusClass}">
+                <div class="historial-header">
+                    <h4>Solicitud #${request.id}</h4>
+                    <span class="status-badge ${statusClass}">${request.status.toUpperCase()}</span>
+                </div>
+                <div class="historial-info">
+                    <div class="info-row">
+                        <span><strong>Solicitante:</strong> ${request.userName}</span>
+                        <span><strong>Fecha:</strong> ${formatDateTime(request.createdAt)}</span>
+                    </div>
+                    <div class="info-row">
+                        <span><strong>Tipo:</strong> ${request.type.toUpperCase()}</span>
+                        <span><strong>Modalidad:</strong> ${request.requestType === 'proyecto' ? 'Por Proyecto' : 'Individual'}</span>
+                    </div>
+                    ${request.projectName ? `
+                        <div class="info-row">
+                            <span><strong>Proyecto:</strong> ${request.projectName} (${request.projectCECO})</span>
+                        </div>
+                    ` : ''}
+                    ${request.status === 'approved' ? `
+                        <div class="info-row">
+                            <span><strong>Aprobado por:</strong> ${request.approvedBy}</span>
+                            <span><strong>Fecha aprobación:</strong> ${formatDateTime(request.approvedAt)}</span>
+                        </div>
+                    ` : ''}
+                    ${request.status === 'rejected' ? `
+                        <div class="info-row">
+                            <span><strong>Rechazado por:</strong> ${request.rejectedBy}</span>
+                            <span><strong>Fecha rechazo:</strong> ${formatDateTime(request.rejectedAt)}</span>
+                        </div>
+                    ` : ''}
+                </div>
+                ${request.products && request.products.length > 0 ? `
+                    <div class="historial-products">
+                        <strong>Productos:</strong>
+                        <ul>
+                            ${request.products.map(p => 
+                                `<li>${p.code} - ${p.name}: ${p.quantity} ${p.unit}</li>`
+                            ).join('')}
+                        </ul>
+                    </div>
+                ` : ''}
+                ${request.file ? `
+                    <div class="historial-file">
+                        <strong>Archivo adjunto:</strong> ${request.file.name}
+                    </div>
+                ` : ''}
+                <div class="historial-actions">
+                    ${request.status === 'approved' ? `
+                        <button class="btn btn-primary" onclick="regenerateVoucher('${request.id}')">
+                            <i class="fas fa-file-pdf"></i> Regenerar Vale
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Regenerar vale de entrega
+function regenerateVoucher(requestId) {
+    const request = DATABASE.requests.find(r => r.id === requestId);
+    if (request && request.status === 'approved') {
+        generateDeliveryVoucher(request);
+        showToast('Vale de retiro regenerado', 'success');
     }
 }
