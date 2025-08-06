@@ -94,58 +94,17 @@ let APP_STATE = {
     confirmCallback: null
 };
 
-// Base de datos local (simulada)
+// Referencias a la base de datos Firebase
+let DATABASE_REFS = {
+    products: null,
+    requests: null,
+    entries: null,
+    deliveries: null
+};
+
+// Cache local para datos de Firebase
 let DATABASE = {
-    products: [
-        {
-            id: 'MAT-001',
-            code: 'MAT-001',
-            name: 'Soldadura 7018',
-            description: 'Electrodo para soldadura 7018 3.2mm',
-            unit: 'kg',
-            stock: 50,
-            minStock: 10,
-            location: 'Estante A-1',
-            type: 'material',
-            barcode: '789123456789'
-        },
-        {
-            id: 'EPP-001',
-            code: 'EPP-001',
-            name: 'Casco Soldador',
-            description: 'Casco de soldadura fotosensible',
-            unit: 'unidad',
-            stock: 5,
-            minStock: 2,
-            location: 'Vitrina B-2',
-            type: 'epp',
-            barcode: '123456789012'
-        },
-        {
-            id: 'MAT-002',
-            code: 'MAT-002',
-            name: 'Cable 12 AWG',
-            description: 'Cable eléctrico 12 AWG por metro',
-            unit: 'metros',
-            stock: 2,
-            minStock: 50,
-            location: 'Bobina C-1',
-            type: 'material',
-            barcode: '456789123456'
-        },
-        {
-            id: 'EPP-002',
-            code: 'EPP-002',
-            name: 'Guantes Dieléctricos',
-            description: 'Guantes clase 00 hasta 500V',
-            unit: 'par',
-            stock: 8,
-            minStock: 5,
-            location: 'Vitrina B-1',
-            type: 'epp',
-            barcode: '987654321098'
-        }
-    ],
+    products: [],
     requests: [],
     entries: [],
     deliveries: []
@@ -157,22 +116,215 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeApp() {
-    loadData();
+    initializeFirebase();
     setupEventListeners();
     checkSession();
     setupKeyboardScanner();
 }
 
-// Gestión de datos
-function loadData() {
-    const savedData = localStorage.getItem(CONFIG.STORAGE_KEY);
-    if (savedData) {
-        DATABASE = { ...DATABASE, ...JSON.parse(savedData) };
-    }
+// Inicializar Firebase
+function initializeFirebase() {
+    console.log('Inicializando Firebase...');
+    
+    // Referencias a la base de datos
+    DATABASE_REFS.products = firebase.database().ref('products');
+    DATABASE_REFS.requests = firebase.database().ref('requests');
+    DATABASE_REFS.entries = firebase.database().ref('entries');
+    DATABASE_REFS.deliveries = firebase.database().ref('deliveries');
+    
+    // Suscribirse a cambios en productos
+    DATABASE_REFS.products.on('value', (snapshot) => {
+        const data = snapshot.val();
+        DATABASE.products = data ? Object.keys(data).map(key => ({...data[key], id: key})) : [];
+        console.log('Productos actualizados desde Firebase:', DATABASE.products.length);
+        
+        // Si hay productos pero no están inicializados, inicializar con datos por defecto
+        if (DATABASE.products.length === 0) {
+            initializeDefaultProducts();
+        }
+        
+        // Actualizar UI si estamos en el tab de inventario
+        if (APP_STATE.currentTab === 'inventario') {
+            loadInventory();
+        }
+    });
+    
+    // Suscribirse a cambios en solicitudes
+    DATABASE_REFS.requests.on('value', (snapshot) => {
+        const data = snapshot.val();
+        DATABASE.requests = data ? Object.keys(data).map(key => ({...data[key], id: key})) : [];
+        console.log('Solicitudes actualizadas desde Firebase:', DATABASE.requests.length);
+        
+        // Actualizar notificaciones
+        updateNotifications();
+        
+        // Actualizar UI si estamos en el tab de autorizar
+        if (APP_STATE.currentTab === 'autorizar') {
+            loadPendingRequests();
+        }
+    });
+    
+    // Suscribirse a cambios en entradas
+    DATABASE_REFS.entries.on('value', (snapshot) => {
+        const data = snapshot.val();
+        DATABASE.entries = data ? Object.keys(data).map(key => ({...data[key], id: key})) : [];
+        console.log('Entradas actualizadas desde Firebase:', DATABASE.entries.length);
+        
+        // Actualizar UI si estamos en el tab de entradas
+        if (APP_STATE.currentTab === 'entradas') {
+            loadRecentEntries();
+        }
+    });
+    
+    // Suscribirse a cambios en entregas
+    DATABASE_REFS.deliveries.on('value', (snapshot) => {
+        const data = snapshot.val();
+        DATABASE.deliveries = data ? Object.keys(data).map(key => ({...data[key], id: key})) : [];
+        console.log('Entregas actualizadas desde Firebase:', DATABASE.deliveries.length);
+    });
 }
 
+// Inicializar productos por defecto si la base de datos está vacía
+function initializeDefaultProducts() {
+    console.log('Inicializando productos por defecto...');
+    const defaultProducts = [
+        {
+            code: 'MAT-001',
+            name: 'Soldadura 7018',
+            description: 'Electrodo para soldadura 7018 3.2mm',
+            unit: 'kg',
+            stock: 50,
+            minStock: 10,
+            location: 'Estante A-1',
+            type: 'material',
+            barcode: '789123456789',
+            createdAt: new Date().toISOString(),
+            createdBy: 'System'
+        },
+        {
+            code: 'EPP-001',
+            name: 'Casco Soldador',
+            description: 'Casco de soldadura fotosensible',
+            unit: 'unidad',
+            stock: 5,
+            minStock: 2,
+            location: 'Vitrina B-2',
+            type: 'epp',
+            barcode: '123456789012',
+            createdAt: new Date().toISOString(),
+            createdBy: 'System'
+        },
+        {
+            code: 'MAT-002',
+            name: 'Cable 12 AWG',
+            description: 'Cable eléctrico 12 AWG por metro',
+            unit: 'metros',
+            stock: 2,
+            minStock: 50,
+            location: 'Bobina C-1',
+            type: 'material',
+            barcode: '456789123456',
+            createdAt: new Date().toISOString(),
+            createdBy: 'System'
+        },
+        {
+            code: 'EPP-002',
+            name: 'Guantes Dieléctricos',
+            description: 'Guantes clase 00 hasta 500V',
+            unit: 'par',
+            stock: 8,
+            minStock: 5,
+            location: 'Vitrina B-1',
+            type: 'epp',
+            barcode: '987654321098',
+            createdAt: new Date().toISOString(),
+            createdBy: 'System'
+        }
+    ];
+    
+    // Agregar productos por defecto a Firebase
+    defaultProducts.forEach(product => {
+        const newRef = DATABASE_REFS.products.push();
+        newRef.set(product);
+    });
+}
+
+// Gestión de datos Firebase
+function saveProduct(product) {
+    return new Promise((resolve, reject) => {
+        if (product.id && product.id !== 'new') {
+            // Actualizar producto existente
+            DATABASE_REFS.products.child(product.id).set(product)
+                .then(() => resolve(product))
+                .catch(reject);
+        } else {
+            // Crear nuevo producto
+            const newRef = DATABASE_REFS.products.push();
+            const productWithoutId = { ...product };
+            delete productWithoutId.id;
+            newRef.set(productWithoutId)
+                .then(() => resolve({ ...product, id: newRef.key }))
+                .catch(reject);
+        }
+    });
+}
+
+function saveRequest(request) {
+    return new Promise((resolve, reject) => {
+        const newRef = DATABASE_REFS.requests.push();
+        const requestWithoutId = { ...request };
+        delete requestWithoutId.id;
+        newRef.set(requestWithoutId)
+            .then(() => resolve({ ...request, id: newRef.key }))
+            .catch(reject);
+    });
+}
+
+function updateRequest(requestId, updates) {
+    return DATABASE_REFS.requests.child(requestId).update(updates);
+}
+
+function saveEntry(entry) {
+    return new Promise((resolve, reject) => {
+        const newRef = DATABASE_REFS.entries.push();
+        const entryWithoutId = { ...entry };
+        delete entryWithoutId.id;
+        newRef.set(entryWithoutId)
+            .then(() => resolve({ ...entry, id: newRef.key }))
+            .catch(reject);
+    });
+}
+
+function saveDelivery(delivery) {
+    return new Promise((resolve, reject) => {
+        const newRef = DATABASE_REFS.deliveries.push();
+        const deliveryWithoutId = { ...delivery };
+        delete deliveryWithoutId.id;
+        newRef.set(deliveryWithoutId)
+            .then(() => resolve({ ...delivery, id: newRef.key }))
+            .catch(reject);
+    });
+}
+
+function deleteProduct(productId) {
+    return DATABASE_REFS.products.child(productId).remove();
+}
+
+// Mantener compatibilidad con localStorage para sesión
 function saveData() {
-    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify(DATABASE));
+    // Ahora solo guarda datos temporales/locales
+    localStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify({
+        selectedProducts: APP_STATE.selectedProducts
+    }));
+}
+
+function loadData() {
+    // Cargar solo datos temporales/locales
+    const savedData = localStorage.getItem(CONFIG.STORAGE_KEY);
+    if (savedData) {
+        const localData = JSON.parse(savedData);
+        APP_STATE.selectedProducts = localData.selectedProducts || [];
+    }
 }
 
 // Gestión de sesión
@@ -574,7 +726,6 @@ function submitManualRequest() {
     }
     
     const request = {
-        id: generateId(),
         userId: APP_STATE.currentUser.username || APP_STATE.currentUser.email,
         userName: APP_STATE.currentUser.name,
         type: 'manual',
@@ -590,20 +741,20 @@ function submitManualRequest() {
     // Debug: Verificar que la solicitud se está creando
     console.log('Nueva solicitud creada:', request);
     
-    DATABASE.requests.push(request);
-    saveData();
-    
-    // Debug: Verificar todas las solicitudes pendientes
-    const pendingCount = DATABASE.requests.filter(r => r.status === 'pending').length;
-    console.log('Total solicitudes pendientes:', pendingCount);
-    console.log('Todas las solicitudes:', DATABASE.requests);
-    
-    showToast('Solicitud enviada correctamente', 'success');
-    hideRequestForms();
-    clearSelectedProducts();
-    
-    // Notificar a admin - Forzar actualización
-    updateNotifications();
+    // Guardar en Firebase
+    saveRequest(request)
+        .then((savedRequest) => {
+            console.log('Solicitud guardada en Firebase:', savedRequest);
+            showToast('Solicitud enviada correctamente', 'success');
+            hideRequestForms();
+            clearSelectedProducts();
+            
+            // Las notificaciones se actualizarán automáticamente por el listener de Firebase
+        })
+        .catch((error) => {
+            console.error('Error al guardar solicitud:', error);
+            showToast('Error al enviar solicitud', 'error');
+        });
 }
 
 function submitFileRequest() {
@@ -626,7 +777,6 @@ function submitFileRequest() {
     const fileType = file.name.toLowerCase().endsWith('.pdf') ? 'pdf' : 'excel';
     
     const request = {
-        id: generateId(),
         userId: APP_STATE.currentUser.username || APP_STATE.currentUser.email,
         userName: APP_STATE.currentUser.name,
         type: fileType,
@@ -646,18 +796,20 @@ function submitFileRequest() {
     // Debug: Verificar que la solicitud se está creando
     console.log('Nueva solicitud con archivo creada:', request);
     
-    DATABASE.requests.push(request);
-    saveData();
-    
-    // Debug: Verificar todas las solicitudes pendientes
-    const pendingCount = DATABASE.requests.filter(r => r.status === 'pending').length;
-    console.log('Total solicitudes pendientes:', pendingCount);
-    
-    showToast('Solicitud enviada correctamente', 'success');
-    hideRequestForms();
-    fileInput.value = '';
-    
-    updateNotifications();
+    // Guardar en Firebase
+    saveRequest(request)
+        .then((savedRequest) => {
+            console.log('Solicitud guardada en Firebase:', savedRequest);
+            showToast('Solicitud enviada correctamente', 'success');
+            hideRequestForms();
+            fileInput.value = '';
+            
+            // Las notificaciones se actualizarán automáticamente por el listener de Firebase
+        })
+        .catch((error) => {
+            console.error('Error al guardar solicitud:', error);
+            showToast('Error al enviar solicitud', 'error');
+        });
 }
 
 // Inventario
@@ -834,49 +986,74 @@ function approveRequest(requestId) {
             return;
         }
         
-        // Descontar stock
-        request.products.forEach(p => {
+        // Actualizar stock en Firebase
+        const updatePromises = request.products.map(p => {
             const product = DATABASE.products.find(prod => prod.id === p.id);
             if (product) {
-                product.stock -= p.quantity;
+                const newStock = product.stock - p.quantity;
+                return DATABASE_REFS.products.child(product.id).update({ stock: newStock });
             }
+            return Promise.resolve();
+        });
+        
+        Promise.all(updatePromises).catch(error => {
+            console.error('Error actualizando stock:', error);
         });
     }
     
-    request.status = 'approved';
-    request.approvedAt = new Date().toISOString();
-    request.approvedBy = APP_STATE.currentUser.name;
+    const updates = {
+        status: 'approved',
+        approvedAt: new Date().toISOString(),
+        approvedBy: APP_STATE.currentUser.name
+    };
     
-    // Registrar entrega
-    DATABASE.deliveries.push({
-        id: generateId(),
-        requestId: requestId,
-        deliveredBy: APP_STATE.currentUser.name,
-        deliveredAt: new Date().toISOString(),
-        products: request.products
-    });
-    
-    saveData();
-    showToast('Solicitud aprobada correctamente', 'success');
-    loadPendingRequests();
-    updateNotifications();
-    
-    // Generar PDF de vale
-    generateDeliveryVoucher(request);
+    // Actualizar solicitud en Firebase
+    updateRequest(requestId, updates)
+        .then(() => {
+            // Registrar entrega
+            const delivery = {
+                requestId: requestId,
+                deliveredBy: APP_STATE.currentUser.name,
+                deliveredAt: new Date().toISOString(),
+                products: request.products
+            };
+            
+            return saveDelivery(delivery);
+        })
+        .then(() => {
+            showToast('Solicitud aprobada correctamente', 'success');
+            
+            // Generar PDF de vale
+            const approvedRequest = { ...request, ...updates };
+            generateDeliveryVoucher(approvedRequest);
+            
+            // Las UI se actualizan automáticamente por los listeners de Firebase
+        })
+        .catch(error => {
+            console.error('Error aprobando solicitud:', error);
+            showToast('Error al aprobar solicitud', 'error');
+        });
 }
 
 function rejectRequest(requestId) {
     const request = DATABASE.requests.find(r => r.id === requestId);
     if (!request) return;
     
-    request.status = 'rejected';
-    request.rejectedAt = new Date().toISOString();
-    request.rejectedBy = APP_STATE.currentUser.name;
+    const updates = {
+        status: 'rejected',
+        rejectedAt: new Date().toISOString(),
+        rejectedBy: APP_STATE.currentUser.name
+    };
     
-    saveData();
-    showToast('Solicitud rechazada', 'success');
-    loadPendingRequests();
-    updateNotifications();
+    updateRequest(requestId, updates)
+        .then(() => {
+            showToast('Solicitud rechazada', 'success');
+            // Las UI se actualizan automáticamente por los listeners de Firebase
+        })
+        .catch(error => {
+            console.error('Error rechazando solicitud:', error);
+            showToast('Error al rechazar solicitud', 'error');
+        });
 }
 
 // Entradas de productos
