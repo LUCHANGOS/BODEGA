@@ -587,14 +587,22 @@ function submitManualRequest() {
         file: null
     };
     
+    // Debug: Verificar que la solicitud se está creando
+    console.log('Nueva solicitud creada:', request);
+    
     DATABASE.requests.push(request);
     saveData();
+    
+    // Debug: Verificar todas las solicitudes pendientes
+    const pendingCount = DATABASE.requests.filter(r => r.status === 'pending').length;
+    console.log('Total solicitudes pendientes:', pendingCount);
+    console.log('Todas las solicitudes:', DATABASE.requests);
     
     showToast('Solicitud enviada correctamente', 'success');
     hideRequestForms();
     clearSelectedProducts();
     
-    // Notificar a admin
+    // Notificar a admin - Forzar actualización
     updateNotifications();
 }
 
@@ -635,8 +643,15 @@ function submitFileRequest() {
         }
     };
     
+    // Debug: Verificar que la solicitud se está creando
+    console.log('Nueva solicitud con archivo creada:', request);
+    
     DATABASE.requests.push(request);
     saveData();
+    
+    // Debug: Verificar todas las solicitudes pendientes
+    const pendingCount = DATABASE.requests.filter(r => r.status === 'pending').length;
+    console.log('Total solicitudes pendientes:', pendingCount);
     
     showToast('Solicitud enviada correctamente', 'success');
     hideRequestForms();
@@ -1469,9 +1484,14 @@ function updateTabVisibility() {
 
 // Notificaciones
 function updateNotifications() {
+    // Debug: Verificar usuario actual
+    console.log('Usuario actual:', APP_STATE.currentUser);
+    
     // Solo Zaida puede ver notificaciones de solicitudes pendientes
     if (APP_STATE.currentUser && APP_STATE.currentUser.role === 'admin' && APP_STATE.currentUser.username === 'zaida') {
         const pendingCount = DATABASE.requests.filter(r => r.status === 'pending').length;
+        console.log('Zaida logueada - Solicitudes pendientes:', pendingCount);
+        
         document.getElementById('notification-count').textContent = pendingCount;
         document.getElementById('pending-badge').textContent = pendingCount;
         
@@ -1481,6 +1501,7 @@ function updateNotifications() {
             document.getElementById('notifications').style.display = 'none';
         }
     } else {
+        console.log('Usuario no es Zaida o no es admin');
         // Otros usuarios no ven notificaciones
         document.getElementById('notifications').style.display = 'none';
     }
