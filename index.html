@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Control de Bodega - L.A.N.G.</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Pantalla de Login -->
+    <div id="login-screen" class="screen active">
+        <div class="login-container">
+            <div class="login-header">
+                <h1><i class="fas fa-warehouse"></i> Control de Bodega</h1>
+                <p>L.A.N.G. - Sistema de Inventario</p>
+            </div>
+            <form id="login-form">
+                <div class="input-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="email" placeholder="Correo electrónico" required>
+                </div>
+                <div class="input-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="password" placeholder="Contraseña" required>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Ingresar
+                </button>
+            </form>
+            <div id="login-error" class="error-message"></div>
+        </div>
+    </div>
+
+    <!-- Dashboard Principal -->
+    <div id="dashboard-screen" class="screen">
+        <header class="header">
+            <div class="header-left">
+                <h1><i class="fas fa-warehouse"></i> Bodega L.A.N.G.</h1>
+            </div>
+            <div class="header-right">
+                <div class="notifications" id="notifications">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-count" id="notification-count">0</span>
+                </div>
+                <div class="user-info">
+                    <span id="user-name">Usuario</span>
+                    <button id="logout-btn" class="btn btn-logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <nav class="nav-tabs">
+            <button class="nav-tab active" data-tab="solicitar">
+                <i class="fas fa-plus-circle"></i> Solicitar
+            </button>
+            <button class="nav-tab" data-tab="inventario">
+                <i class="fas fa-boxes"></i> Inventario
+            </button>
+            <button class="nav-tab admin-only" data-tab="autorizar">
+                <i class="fas fa-check-circle"></i> Autorizar
+                <span class="pending-badge" id="pending-badge">0</span>
+            </button>
+            <button class="nav-tab admin-only" data-tab="entradas">
+                <i class="fas fa-truck-loading"></i> Entradas
+            </button>
+            <button class="nav-tab admin-only" data-tab="reportes">
+                <i class="fas fa-chart-bar"></i> Reportes
+            </button>
+        </nav>
+
+        <!-- Tab: Solicitar Materiales -->
+        <div id="tab-solicitar" class="tab-content active">
+            <div class="tab-header">
+                <h2><i class="fas fa-plus-circle"></i> Solicitar Materiales/EPP</h2>
+            </div>
+
+            <!-- Opciones de solicitud -->
+            <div class="request-options">
+                <button class="option-card" id="manual-request">
+                    <i class="fas fa-hand-pointer"></i>
+                    <h3>Solicitud Manual</h3>
+                    <p>Buscar y seleccionar productos</p>
+                </button>
+                <button class="option-card" id="pdf-request">
+                    <i class="fas fa-file-pdf"></i>
+                    <h3>Subir PDF</h3>
+                    <p>Adjuntar receta en PDF</p>
+                </button>
+                <button class="option-card" id="excel-request">
+                    <i class="fas fa-file-excel"></i>
+                    <h3>Subir Excel</h3>
+                    <p>Archivo con formato de solicitud</p>
+                </button>
+            </div>
+
+            <!-- Formulario de solicitud manual -->
+            <div id="manual-form" class="request-form hidden">
+                <h3>Nueva Solicitud Manual</h3>
+                <div class="form-group">
+                    <label>Tipo de Solicitud:</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="request-type" value="individual" checked> Individual</label>
+                        <label><input type="radio" name="request-type" value="proyecto"> Por Proyecto</label>
+                    </div>
+                </div>
+                
+                <div id="project-info" class="hidden">
+                    <div class="form-group">
+                        <input type="text" id="project-name" placeholder="Nombre del Proyecto">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="project-ceco" placeholder="CECO">
+                    </div>
+                </div>
+
+                <div class="product-search">
+                    <div class="search-container">
+                        <input type="text" id="product-search" placeholder="Buscar por código o nombre...">
+                        <button type="button" id="scan-camera" class="btn btn-secondary">
+                            <i class="fas fa-camera"></i> Escanear
+                        </button>
+                    </div>
+                    <div id="search-results" class="search-results"></div>
+                </div>
+
+                <div class="selected-products">
+                    <h4>Productos Seleccionados</h4>
+                    <div id="selected-items" class="selected-items"></div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="submit-manual" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Enviar Solicitud
+                    </button>
+                    <button type="button" id="cancel-manual" class="btn btn-secondary">Cancelar</button>
+                </div>
+            </div>
+
+            <!-- Formulario de subida de archivos -->
+            <div id="file-form" class="request-form hidden">
+                <h3 id="file-form-title">Subir Archivo</h3>
+                <div class="form-group">
+                    <label>Tipo de Solicitud:</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="file-request-type" value="individual" checked> Individual</label>
+                        <label><input type="radio" name="file-request-type" value="proyecto"> Por Proyecto</label>
+                    </div>
+                </div>
+                
+                <div id="file-project-info" class="hidden">
+                    <div class="form-group">
+                        <input type="text" id="file-project-name" placeholder="Nombre del Proyecto">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" id="file-project-ceco" placeholder="CECO">
+                    </div>
+                </div>
+
+                <div class="file-upload">
+                    <input type="file" id="file-input" accept=".pdf,.xls,.xlsx">
+                    <label for="file-input" class="file-label">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span>Seleccionar archivo</span>
+                    </label>
+                </div>
+
+                <div class="form-actions">
+                    <button type="button" id="submit-file" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Enviar Solicitud
+                    </button>
+                    <button type="button" id="cancel-file" class="btn btn-secondary">Cancelar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Inventario -->
+        <div id="tab-inventario" class="tab-content">
+            <div class="tab-header">
+                <h2><i class="fas fa-boxes"></i> Inventario</h2>
+                <div class="tab-actions">
+                    <div class="search-container">
+                        <input type="text" id="inventory-search" placeholder="Buscar productos...">
+                        <button id="inventory-scan" class="btn btn-secondary">
+                            <i class="fas fa-camera"></i>
+                        </button>
+                    </div>
+                    <div class="filter-tabs">
+                        <button class="filter-tab active" data-filter="all">Todos</button>
+                        <button class="filter-tab" data-filter="material">Materiales</button>
+                        <button class="filter-tab" data-filter="epp">EPP</button>
+                        <button class="filter-tab" data-filter="low-stock">Stock Bajo</button>
+                    </div>
+                </div>
+            </div>
+            <div id="inventory-list" class="inventory-list"></div>
+            <div class="admin-only">
+                <button id="download-inventory" class="btn btn-primary">
+                    <i class="fas fa-download"></i> Descargar PDF Completo
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab: Autorizar (Solo Admin) -->
+        <div id="tab-autorizar" class="tab-content">
+            <div class="tab-header">
+                <h2><i class="fas fa-check-circle"></i> Solicitudes Pendientes</h2>
+            </div>
+            <div id="pending-requests" class="pending-requests"></div>
+        </div>
+
+        <!-- Tab: Entradas (Solo Admin) -->
+        <div id="tab-entradas" class="tab-content">
+            <div class="tab-header">
+                <h2><i class="fas fa-truck-loading"></i> Registrar Entradas</h2>
+            </div>
+            <div class="entry-form">
+                <div class="search-container">
+                    <input type="text" id="entry-product-search" placeholder="Código del producto...">
+                    <button id="entry-scan" class="btn btn-secondary">
+                        <i class="fas fa-camera"></i> Escanear
+                    </button>
+                </div>
+                <div class="form-group">
+                    <input type="number" id="entry-quantity" placeholder="Cantidad" min="1">
+                </div>
+                <button id="register-entry" class="btn btn-primary">
+                    <i class="fas fa-plus"></i> Registrar Entrada
+                </button>
+            </div>
+            <div id="recent-entries" class="recent-entries">
+                <h3>Entradas Recientes</h3>
+                <div id="entries-list"></div>
+            </div>
+        </div>
+
+        <!-- Tab: Reportes (Solo Admin) -->
+        <div id="tab-reportes" class="tab-content">
+            <div class="tab-header">
+                <h2><i class="fas fa-chart-bar"></i> Reportes</h2>
+            </div>
+            <div class="reports-grid">
+                <button class="report-card" data-report="entradas">
+                    <i class="fas fa-truck-loading"></i>
+                    <h3>Entradas de Productos</h3>
+                </button>
+                <button class="report-card" data-report="retiros-usuario">
+                    <i class="fas fa-user-check"></i>
+                    <h3>Retiros por Usuario</h3>
+                </button>
+                <button class="report-card" data-report="retiros-proyecto">
+                    <i class="fas fa-project-diagram"></i>
+                    <h3>Retiros por Proyecto</h3>
+                </button>
+                <button class="report-card" data-report="stock-bajo">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Stock Bajo</h3>
+                </button>
+                <button class="report-card" data-report="solicitudes">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h3>Historial Solicitudes</h3>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Escáner -->
+    <div id="scanner-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Escanear Código de Barras</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="scanner-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Autorización -->
+    <div id="auth-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Autorizar Solicitud</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="auth-details"></div>
+                <div class="auth-actions">
+                    <button id="approve-request" class="btn btn-success">
+                        <i class="fas fa-check"></i> Aprobar y Entregar
+                    </button>
+                    <button id="reject-request" class="btn btn-danger">
+                        <i class="fas fa-times"></i> Rechazar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
