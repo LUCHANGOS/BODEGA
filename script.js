@@ -8,60 +8,77 @@ const CONFIG = {
 
 // Usuarios predefinidos con roles
 const USERS = {
-    'zaida.rassi@lang.com': {
+    'zaida': {
         password: CryptoJS.SHA256('ZaidaRassi2024!').toString(),
         name: 'Zaida Rassi',
-        role: 'admin'
+        role: 'admin',
+        email: 'zaida.rassi@lang.com'
     },
-    'carlos@lang.com': {
+    'luis': {
+        password: CryptoJS.SHA256('Luis2024!').toString(),
+        name: 'Luis',
+        role: 'admin',
+        email: 'luis@lang.com'
+    },
+    'carlos': {
         password: CryptoJS.SHA256('Carlos2024').toString(),
         name: 'Carlos',
-        role: 'soldadura'
+        role: 'soldadura',
+        email: 'carlos@lang.com'
     },
-    'esteban@lang.com': {
+    'esteban': {
         password: CryptoJS.SHA256('Esteban2024').toString(),
         name: 'Esteban',
-        role: 'soldadura'
+        role: 'soldadura',
+        email: 'esteban@lang.com'
     },
-    'alfredo@lang.com': {
+    'alfredo': {
         password: CryptoJS.SHA256('Alfredo2024').toString(),
         name: 'Alfredo',
-        role: 'soldadura'
+        role: 'soldadura',
+        email: 'alfredo@lang.com'
     },
-    'cristian@lang.com': {
+    'cristian': {
         password: CryptoJS.SHA256('Cristian2024').toString(),
         name: 'Cristian',
-        role: 'electrico'
+        role: 'electrico',
+        email: 'cristian@lang.com'
     },
-    'matias@lang.com': {
+    'matias': {
         password: CryptoJS.SHA256('Matias2024').toString(),
         name: 'Matías',
-        role: 'electrico'
+        role: 'electrico',
+        email: 'matias@lang.com'
     },
-    'martin@lang.com': {
+    'martin': {
         password: CryptoJS.SHA256('Martin2024').toString(),
         name: 'Martín',
-        role: 'electrico'
+        role: 'electrico',
+        email: 'martin@lang.com'
     },
-    'raul@lang.com': {
+    'raul': {
         password: CryptoJS.SHA256('Raul2024').toString(),
         name: 'Raúl',
-        role: 'electrico'
+        role: 'electrico',
+        email: 'raul@lang.com'
     },
-    'juan@lang.com': {
+    'juan': {
         password: CryptoJS.SHA256('Juan2024').toString(),
         name: 'Juan',
-        role: 'pintura'
+        role: 'pintura',
+        email: 'juan@lang.com'
     },
-    'felipe@lang.com': {
+    'felipe': {
         password: CryptoJS.SHA256('Felipe2024').toString(),
         name: 'Felipe',
-        role: 'pintura'
+        role: 'pintura',
+        email: 'felipe@lang.com'
     },
-    'angelica@lang.com': {
+    'angelica': {
         password: CryptoJS.SHA256('Angelica2024').toString(),
         name: 'Angélica',
-        role: 'aseo'
+        role: 'aseo',
+        email: 'angelica@lang.com'
     }
 };
 
@@ -170,13 +187,14 @@ function checkSession() {
     }
 }
 
-function login(email, password) {
+function login(username, password) {
     const hashedPassword = CryptoJS.SHA256(password).toString();
-    const user = USERS[email];
+    const user = USERS[username.toLowerCase()];
     
     if (user && user.password === hashedPassword) {
         APP_STATE.currentUser = {
-            email: email,
+            username: username.toLowerCase(),
+            email: user.email,
             name: user.name,
             role: user.role
         };
@@ -345,14 +363,14 @@ function setupEventListeners() {
 function handleLogin(e) {
     e.preventDefault();
     
-    const email = document.getElementById('email').value;
+    const username = document.getElementById('username').value;
     const password = document.getElementById('password').value;
     const errorDiv = document.getElementById('login-error');
     
-    if (login(email, password)) {
+    if (login(username, password)) {
         errorDiv.textContent = '';
     } else {
-        errorDiv.textContent = 'Correo o contraseña incorrectos';
+        errorDiv.textContent = 'Usuario o contraseña incorrectos';
     }
 }
 
@@ -549,7 +567,7 @@ function submitManualRequest() {
     
     const request = {
         id: generateId(),
-        userId: APP_STATE.currentUser.email,
+        userId: APP_STATE.currentUser.username || APP_STATE.currentUser.email,
         userName: APP_STATE.currentUser.name,
         type: 'manual',
         requestType: requestType,
@@ -593,7 +611,7 @@ function submitFileRequest() {
     
     const request = {
         id: generateId(),
-        userId: APP_STATE.currentUser.email,
+        userId: APP_STATE.currentUser.username || APP_STATE.currentUser.email,
         userName: APP_STATE.currentUser.name,
         type: fileType,
         requestType: requestType,
@@ -1921,9 +1939,9 @@ function searchUsers(e) {
         return;
     }
     
-    const matches = Object.entries(USERS).filter(([email, user]) => 
-        user.name.toLowerCase().includes(query) || email.toLowerCase().includes(query)
-    ).map(([email, user]) => ({ email, ...user }));
+    const matches = Object.entries(USERS).filter(([username, user]) => 
+        user.name.toLowerCase().includes(query) || username.toLowerCase().includes(query)
+    ).map(([username, user]) => ({ username, ...user }));
     
     displayUserResults(matches);
 }
