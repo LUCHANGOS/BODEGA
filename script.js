@@ -71,7 +71,10 @@ let APP_STATE = {
     currentTab: 'solicitar',
     selectedProducts: [],
     scanner: null,
-    scannerCallback: null
+    scannerCallback: null,
+    currentProductId: null,
+    managementMode: null,
+    confirmCallback: null
 };
 
 // Base de datos local (simulada)
@@ -241,6 +244,9 @@ function showTab(tabName) {
         case 'entradas':
             loadRecentEntries();
             break;
+        case 'gestionar':
+            showManagementOptions();
+            break;
     }
 }
 
@@ -305,6 +311,21 @@ function setupEventListeners() {
     
     // Subida de archivos
     document.getElementById('file-input').addEventListener('change', handleFileSelect);
+    
+    // Gestión de inventario
+    document.getElementById('add-product').addEventListener('click', showAddProductForm);
+    document.getElementById('manage-add-product').addEventListener('click', showAddProductForm);
+    document.getElementById('manage-edit-products').addEventListener('click', showEditProductsList);
+    document.getElementById('manage-adjust-stock').addEventListener('click', showStockAdjustList);
+    document.getElementById('manage-delete-products').addEventListener('click', showDeleteProductsList);
+    document.getElementById('cancel-product-form').addEventListener('click', hideProductForm);
+    document.getElementById('product-data-form').addEventListener('submit', handleProductFormSubmit);
+    document.getElementById('scan-barcode-product').addEventListener('click', () => openScanner(handleProductBarcodeScan));
+    
+    // Modales
+    document.getElementById('confirm-yes').addEventListener('click', handleConfirmYes);
+    document.getElementById('confirm-no').addEventListener('click', closeModal);
+    document.getElementById('apply-stock-adjust').addEventListener('click', applyStockAdjustment);
 }
 
 // Autenticación
@@ -598,6 +619,8 @@ function displayInventory(products) {
         return;
     }
     
+    const isAdmin = APP_STATE.currentUser && APP_STATE.currentUser.role === 'admin';
+    
     container.innerHTML = products.map(product => `
         <div class="inventory-item ${product.type} ${product.stock <= product.minStock ? 'low-stock' : ''}">
             <div class="item-header">
@@ -618,6 +641,19 @@ function displayInventory(products) {
                 <span class="detail-label">Código Barras:</span>
                 <span class="detail-value">${product.barcode || 'N/A'}</span>
             </div>
+            ${isAdmin ? `
+                <div class="inventory-item-actions">
+                    <button class="btn btn-primary" onclick="editProduct('${product.id}')" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-warning" onclick="adjustProductStock('${product.id}')" title="Ajustar Stock">
+                        <i class="fas fa-balance-scale"></i>
+                    </button>
+                    <button class="btn btn-danger" onclick="deleteProduct('${product.id}')" title="Eliminar">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            ` : ''}
         </div>
     `).join('');
 }
@@ -1230,4 +1266,387 @@ function showToast(message, type = 'success') {
     setTimeout(() => {
         toast.remove();
     }, 3000);
+}
+
+// ============ GESTIÓN DE INVENTARIO ============
+
+// Mostrar opciones de gestión
+function showManagementOptions() {
+    hideProductForm();
+    hideProductsList();
+}
+
+// Agregar nuevo producto
+function showAddProductForm() {
+    APP_STATE.managementMode = 'add';
+    APP_STATE.currentProductId = null;
+    document.getElementById('product-form-title').textContent = 'Agregar Nuevo Producto';
+    clearProductForm();
+    showProductForm();
+}
+
+// Mostrar formulario de producto
+function showProductForm() {
+    hideProductsList();
+    document.getElementById('product-form').classList.remove('hidden');
+}
+
+// Ocultar formulario de producto
+function hideProductForm() {
+    document.getElementById('product-form').classList.add('hidden');
+    clearProductForm();
+}
+
+// Limpiar formulario
+function clearProductForm() {
+    document.getElementById('product-data-form').reset();
+}
+
+// Mostrar lista de productos para editar
+function showEditProductsList() {
+    APP_STATE.managementMode = 'edit';
+    showProductsList('Seleccione un producto para editar');
+}
+
+// Mostrar lista de productos para ajuste de stock
+function showStockAdjustList() {
+    APP_STATE.managementMode = 'adjust';
+    showProductsList('Seleccione un producto para ajustar stock');
+}
+
+// Mostrar lista de productos para eliminar
+function showDeleteProductsList() {
+    APP_STATE.managementMode = 'delete';
+    showProductsList('Seleccione un producto para eliminar');
+}
+
+// Mostrar lista de productos
+function showProductsList(title) {
+    hideProductForm();
+    const container = document.getElementById('products-management-list');
+    container.classList.remove('hidden');
+    
+    let html = `<div style="padding: 1rem; border-bottom: 2px solid var(--primary-color); background: var(--light-color);">
+                    <h3>${title}</h3>
+                </div>`;
+    
+    DATABASE.products.forEach(product => {
+        const stockStatus = product.stock <= product.minStock ? 'stock-low' : 'stock-ok';
+        const actions = getProductActions(product);
+        
+        html += `
+            <div class="product-management-item">
+                <div class="product-management-info">
+                    <h4>${product.code} - ${product.name}</h4>
+                    <p><strong>Tipo:</strong> ${product.type.toUpperCase()} | 
+                       <strong>Stock:</strong> <span class="${stockStatus}">${product.stock} ${product.unit}</span> | 
+                       <strong>Ubicación:</strong> ${product.location}</p>
+                    <small>${product.description}</small>
+                </div>
+                <div class="product-management-actions">
+                    ${actions}
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+}
+
+// Ocultar lista de productos
+function hideProductsList() {
+    document.getElementById('products-management-list').classList.add('hidden');
+}
+
+// Obtener acciones según el modo
+function getProductActions(product) {
+    switch (APP_STATE.managementMode) {
+        case 'edit':
+            return `<button class="btn btn-primary" onclick="editProduct('${product.id}')">
+                        <i class="fas fa-edit"></i> Editar
+                    </button>`;
+        case 'adjust':
+            return `<button class="btn btn-warning" onclick="adjustProductStock('${product.id}')">
+                        <i class="fas fa-balance-scale"></i> Ajustar Stock
+                    </button>`;
+        case 'delete':
+            return `<button class="btn btn-danger" onclick="deleteProduct('${product.id}')">
+                        <i class="fas fa-trash-alt"></i> Eliminar
+                    </button>`;
+        default:
+            return '';
+    }
+}
+
+// Editar producto
+function editProduct(productId) {
+    const product = DATABASE.products.find(p => p.id === productId);
+    if (!product) return;
+    
+    APP_STATE.managementMode = 'edit';
+    APP_STATE.currentProductId = productId;
+    
+    // Llenar formulario con datos existentes
+    document.getElementById('product-form-title').textContent = 'Editar Producto';
+    document.getElementById('product-code').value = product.code;
+    document.getElementById('product-type').value = product.type;
+    document.getElementById('product-name').value = product.name;
+    document.getElementById('product-description').value = product.description;
+    document.getElementById('product-unit').value = product.unit;
+    document.getElementById('product-location').value = product.location;
+    document.getElementById('product-stock').value = product.stock;
+    document.getElementById('product-min-stock').value = product.minStock;
+    document.getElementById('product-barcode').value = product.barcode || '';
+    
+    showProductForm();
+}
+
+// Ajustar stock de producto
+function adjustProductStock(productId) {
+    const product = DATABASE.products.find(p => p.id === productId);
+    if (!product) return;
+    
+    APP_STATE.currentProductId = productId;
+    
+    // Mostrar información del producto
+    document.getElementById('stock-product-info').innerHTML = `
+        <div class="stock-info-display">
+            <h4>${product.code} - ${product.name}</h4>
+            <p><strong>Stock Actual:</strong> <span class="current-stock">${product.stock} ${product.unit}</span></p>
+            <p><strong>Stock Mínimo:</strong> ${product.minStock} ${product.unit}</p>
+            <p><strong>Ubicación:</strong> ${product.location}</p>
+        </div>
+    `;
+    
+    // Limpiar campos
+    document.getElementById('adjust-quantity').value = '';
+    document.getElementById('adjust-reason').value = '';
+    document.querySelector('input[name="adjust-type"][value="set"]').checked = true;
+    
+    document.getElementById('stock-adjust-modal').classList.add('active');
+}
+
+// Aplicar ajuste de stock
+function applyStockAdjustment() {
+    const productId = APP_STATE.currentProductId;
+    const product = DATABASE.products.find(p => p.id === productId);
+    if (!product) return;
+    
+    const adjustType = document.querySelector('input[name="adjust-type"]:checked').value;
+    const quantity = parseFloat(document.getElementById('adjust-quantity').value);
+    const reason = document.getElementById('adjust-reason').value;
+    
+    if (isNaN(quantity) || quantity < 0) {
+        showToast('Ingrese una cantidad válida', 'error');
+        return;
+    }
+    
+    if (!reason.trim()) {
+        showToast('Ingrese el motivo del ajuste', 'error');
+        return;
+    }
+    
+    const oldStock = product.stock;
+    let newStock;
+    
+    switch (adjustType) {
+        case 'set':
+            newStock = quantity;
+            break;
+        case 'add':
+            newStock = oldStock + quantity;
+            break;
+        case 'subtract':
+            newStock = Math.max(0, oldStock - quantity);
+            break;
+    }
+    
+    // Actualizar stock
+    product.stock = newStock;
+    
+    // Registrar ajuste en historial
+    DATABASE.stockAdjustments = DATABASE.stockAdjustments || [];
+    DATABASE.stockAdjustments.push({
+        id: generateId(),
+        productId: productId,
+        productCode: product.code,
+        productName: product.name,
+        oldStock: oldStock,
+        newStock: newStock,
+        adjustType: adjustType,
+        quantity: quantity,
+        reason: reason,
+        adjustedBy: APP_STATE.currentUser.name,
+        adjustedAt: new Date().toISOString()
+    });
+    
+    saveData();
+    showToast(`Stock ajustado: ${oldStock} → ${newStock} ${product.unit}`, 'success');
+    closeModal();
+    
+    // Refrescar lista si está visible
+    if (APP_STATE.managementMode === 'adjust') {
+        showStockAdjustList();
+    }
+    
+    // Refrescar inventario si está activo
+    if (APP_STATE.currentTab === 'inventario') {
+        loadInventory();
+    }
+}
+
+// Eliminar producto
+function deleteProduct(productId) {
+    const product = DATABASE.products.find(p => p.id === productId);
+    if (!product) return;
+    
+    showConfirmDialog(
+        'Eliminar Producto',
+        `¿Está seguro de eliminar el producto "${product.code} - ${product.name}"?\n\nEsta acción no se puede deshacer.`,
+        () => {
+            // Eliminar producto
+            DATABASE.products = DATABASE.products.filter(p => p.id !== productId);
+            saveData();
+            showToast('Producto eliminado correctamente', 'success');
+            
+            // Refrescar lista
+            if (APP_STATE.managementMode === 'delete') {
+                showDeleteProductsList();
+            }
+            
+            // Refrescar inventario si está activo
+            if (APP_STATE.currentTab === 'inventario') {
+                loadInventory();
+            }
+        }
+    );
+}
+
+// Manejar envío del formulario de producto
+function handleProductFormSubmit(e) {
+    e.preventDefault();
+    
+    const formData = {
+        code: document.getElementById('product-code').value.trim().toUpperCase(),
+        type: document.getElementById('product-type').value,
+        name: document.getElementById('product-name').value.trim(),
+        description: document.getElementById('product-description').value.trim(),
+        unit: document.getElementById('product-unit').value,
+        location: document.getElementById('product-location').value.trim(),
+        stock: parseFloat(document.getElementById('product-stock').value),
+        minStock: parseFloat(document.getElementById('product-min-stock').value),
+        barcode: document.getElementById('product-barcode').value.trim()
+    };
+    
+    // Validaciones
+    if (!formData.code || !formData.type || !formData.name || !formData.unit || 
+        !formData.location || isNaN(formData.stock) || isNaN(formData.minStock)) {
+        showToast('Complete todos los campos obligatorios', 'error');
+        return;
+    }
+    
+    if (formData.stock < 0 || formData.minStock < 0) {
+        showToast('Las cantidades no pueden ser negativas', 'error');
+        return;
+    }
+    
+    // Verificar código único (solo para productos nuevos o si se cambió el código)
+    const existingProduct = DATABASE.products.find(p => p.code === formData.code && p.id !== APP_STATE.currentProductId);
+    if (existingProduct) {
+        showToast('Ya existe un producto con ese código', 'error');
+        return;
+    }
+    
+    // Verificar código de barras único (si se proporciona)
+    if (formData.barcode) {
+        const existingBarcode = DATABASE.products.find(p => p.barcode === formData.barcode && p.id !== APP_STATE.currentProductId);
+        if (existingBarcode) {
+            showToast('Ya existe un producto con ese código de barras', 'error');
+            return;
+        }
+    }
+    
+    if (APP_STATE.managementMode === 'add') {
+        // Agregar nuevo producto
+        const newProduct = {
+            id: generateId(),
+            ...formData,
+            createdAt: new Date().toISOString(),
+            createdBy: APP_STATE.currentUser.name
+        };
+        
+        DATABASE.products.push(newProduct);
+        showToast('Producto agregado correctamente', 'success');
+    } else if (APP_STATE.managementMode === 'edit') {
+        // Editar producto existente
+        const productIndex = DATABASE.products.findIndex(p => p.id === APP_STATE.currentProductId);
+        if (productIndex !== -1) {
+            DATABASE.products[productIndex] = {
+                ...DATABASE.products[productIndex],
+                ...formData,
+                modifiedAt: new Date().toISOString(),
+                modifiedBy: APP_STATE.currentUser.name
+            };
+            showToast('Producto actualizado correctamente', 'success');
+        }
+    }
+    
+    saveData();
+    hideProductForm();
+    showManagementOptions();
+    
+    // Refrescar inventario si está activo
+    if (APP_STATE.currentTab === 'inventario') {
+        loadInventory();
+    }
+}
+
+// Escanear código de barras para producto
+function handleProductBarcodeScan(code) {
+    document.getElementById('product-barcode').value = code;
+    showToast('Código de barras escaneado', 'success');
+}
+
+// Mostrar diálogo de confirmación
+function showConfirmDialog(title, message, callback) {
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-message').textContent = message;
+    APP_STATE.confirmCallback = callback;
+    document.getElementById('confirm-modal').classList.add('active');
+}
+
+// Manejar confirmación
+function handleConfirmYes() {
+    if (APP_STATE.confirmCallback) {
+        APP_STATE.confirmCallback();
+        APP_STATE.confirmCallback = null;
+    }
+    closeModal();
+}
+
+// Agregar botones de edición en inventario (solo para admin)
+function addInventoryEditButtons() {
+    if (APP_STATE.currentUser && APP_STATE.currentUser.role === 'admin') {
+        const inventoryItems = document.querySelectorAll('.inventory-item');
+        inventoryItems.forEach(item => {
+            const productCode = item.querySelector('.item-code').textContent;
+            const product = DATABASE.products.find(p => p.code === productCode);
+            if (product) {
+                const actionsHtml = `
+                    <div class="inventory-item-actions">
+                        <button class="btn btn-primary" onclick="editProduct('${product.id}')" title="Editar">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-warning" onclick="adjustProductStock('${product.id}')" title="Ajustar Stock">
+                            <i class="fas fa-balance-scale"></i>
+                        </button>
+                        <button class="btn btn-danger" onclick="deleteProduct('${product.id}')" title="Eliminar">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
+                `;
+                item.insertAdjacentHTML('beforeend', actionsHtml);
+            }
+        });
+    }
 }

@@ -1096,6 +1096,217 @@ body.admin .nav-tab.admin-only {
     background: var(--warning-color);
 }
 
+/* Gestión de inventario */
+.management-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.product-form {
+    background: white;
+    padding: 2rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.barcode-input-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.barcode-input-group input {
+    flex: 1;
+}
+
+.products-management-list {
+    background: white;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.product-management-item {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: var(--transition);
+}
+
+.product-management-item:hover {
+    background: var(--light-color);
+}
+
+.product-management-item:last-child {
+    border-bottom: none;
+}
+
+.product-management-info {
+    flex: 1;
+}
+
+.product-management-info h4 {
+    margin: 0 0 0.25rem 0;
+    color: var(--primary-color);
+}
+
+.product-management-info p {
+    margin: 0;
+    color: var(--secondary-color);
+    font-size: 0.9rem;
+}
+
+.product-management-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.product-management-actions .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.stock-adjust-form {
+    padding-top: 1rem;
+}
+
+.confirm-actions, 
+.stock-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.stock-info-display {
+    background: var(--light-color);
+    padding: 1rem;
+    border-radius: var(--radius);
+    margin-bottom: 1rem;
+}
+
+.stock-info-display h4 {
+    margin: 0 0 0.5rem 0;
+    color: var(--primary-color);
+}
+
+.stock-info-display .current-stock {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: var(--accent-color);
+}
+
+/* Campos obligatorios */
+label::after {
+    content: '';
+}
+
+label:has(+ input[required])::after,
+label:has(+ select[required])::after {
+    content: ' *';
+    color: var(--danger-color);
+}
+
+/* Validación de formularios */
+input:invalid, 
+select:invalid {
+    border-color: var(--danger-color);
+}
+
+input:valid, 
+select:valid {
+    border-color: var(--success-color);
+}
+
+/* Botones de acción en inventario */
+.inventory-item-actions {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.inventory-item:hover .inventory-item-actions {
+    opacity: 1;
+}
+
+.inventory-item {
+    position: relative;
+}
+
+.inventory-item-actions .btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    margin-left: 0.25rem;
+}
+
+/* Responsive para gestión */
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .management-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .product-management-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .product-management-actions {
+        justify-content: stretch;
+    }
+    
+    .product-management-actions .btn {
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .confirm-actions,
+    .stock-actions {
+        flex-direction: column;
+    }
+    
+    .confirm-actions .btn,
+    .stock-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .barcode-input-group {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 480px) {
+    .inventory-item-actions {
+        opacity: 1;
+        position: static;
+        margin-top: 1rem;
+    }
+    
+    .inventory-item-actions .btn {
+        font-size: 0.7rem;
+        padding: 0.25rem 0.5rem;
+    }
+}
+
 /* Impresión */
 @media print {
     body * {

@@ -69,6 +69,9 @@
             <button class="nav-tab admin-only" data-tab="reportes">
                 <i class="fas fa-chart-bar"></i> Reportes
             </button>
+            <button class="nav-tab admin-only" data-tab="gestionar">
+                <i class="fas fa-cogs"></i> Gestionar
+            </button>
         </nav>
 
         <!-- Tab: Solicitar Materiales -->
@@ -200,6 +203,9 @@
                 <button id="download-inventory" class="btn btn-primary">
                     <i class="fas fa-download"></i> Descargar PDF Completo
                 </button>
+                <button id="add-product" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Agregar Producto
+                </button>
             </div>
         </div>
 
@@ -264,6 +270,115 @@
                 </button>
             </div>
         </div>
+
+        <!-- Tab: Gestionar Inventario (Solo Admin) -->
+        <div id="tab-gestionar" class="tab-content">
+            <div class="tab-header">
+                <h2><i class="fas fa-cogs"></i> Gestionar Inventario</h2>
+            </div>
+            <div class="management-options">
+                <button class="option-card" id="manage-add-product">
+                    <i class="fas fa-plus-circle"></i>
+                    <h3>Agregar Producto</h3>
+                    <p>Crear nuevo producto en inventario</p>
+                </button>
+                <button class="option-card" id="manage-edit-products">
+                    <i class="fas fa-edit"></i>
+                    <h3>Editar Productos</h3>
+                    <p>Modificar productos existentes</p>
+                </button>
+                <button class="option-card" id="manage-adjust-stock">
+                    <i class="fas fa-balance-scale"></i>
+                    <h3>Ajustar Stock</h3>
+                    <p>Corrección manual de cantidades</p>
+                </button>
+                <button class="option-card" id="manage-delete-products">
+                    <i class="fas fa-trash-alt"></i>
+                    <h3>Eliminar Productos</h3>
+                    <p>Remover productos del inventario</p>
+                </button>
+            </div>
+
+            <!-- Formulario Agregar/Editar Producto -->
+            <div id="product-form" class="product-form hidden">
+                <h3 id="product-form-title">Agregar Nuevo Producto</h3>
+                <form id="product-data-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Código del Producto *</label>
+                            <input type="text" id="product-code" placeholder="Ej: MAT-001, EPP-001" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Tipo *</label>
+                            <select id="product-type" required>
+                                <option value="">Seleccionar tipo</option>
+                                <option value="material">Material</option>
+                                <option value="epp">EPP</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Nombre del Producto *</label>
+                        <input type="text" id="product-name" placeholder="Nombre descriptivo" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Descripción</label>
+                        <textarea id="product-description" placeholder="Descripción detallada del producto"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Unidad de Medida *</label>
+                            <select id="product-unit" required>
+                                <option value="">Seleccionar unidad</option>
+                                <option value="unidad">Unidad</option>
+                                <option value="kg">Kilogramo</option>
+                                <option value="metros">Metro</option>
+                                <option value="litro">Litro</option>
+                                <option value="par">Par</option>
+                                <option value="rollo">Rollo</option>
+                                <option value="carrete">Carrete</option>
+                                <option value="caja">Caja</option>
+                                <option value="pack">Pack</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Ubicación en Bodega *</label>
+                            <input type="text" id="product-location" placeholder="Ej: Estante A-1, Vitrina B-2" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Stock Actual *</label>
+                            <input type="number" id="product-stock" min="0" step="0.01" placeholder="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Stock Mínimo *</label>
+                            <input type="number" id="product-min-stock" min="0" step="0.01" placeholder="0" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Código de Barras (Opcional)</label>
+                        <div class="barcode-input-group">
+                            <input type="text" id="product-barcode" placeholder="Escanear o ingresar código">
+                            <button type="button" id="scan-barcode-product" class="btn btn-secondary">
+                                <i class="fas fa-camera"></i> Escanear
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Guardar Producto
+                        </button>
+                        <button type="button" id="cancel-product-form" class="btn btn-secondary">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Lista de productos para editar/eliminar -->
+            <div id="products-management-list" class="products-management-list hidden"></div>
+        </div>
     </div>
 
     <!-- Modal de Escáner -->
@@ -295,6 +410,66 @@
                     <button id="reject-request" class="btn btn-danger">
                         <i class="fas fa-times"></i> Rechazar
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmación -->
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="confirm-title">Confirmar Acción</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="confirm-message">¿Está seguro de realizar esta acción?</p>
+                <div class="confirm-actions">
+                    <button id="confirm-yes" class="btn btn-danger">
+                        <i class="fas fa-check"></i> Sí, Confirmar
+                    </button>
+                    <button id="confirm-no" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Ajuste de Stock -->
+    <div id="stock-adjust-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Ajustar Stock</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="stock-product-info"></div>
+                <div class="stock-adjust-form">
+                    <div class="form-group">
+                        <label>Tipo de Ajuste:</label>
+                        <div class="radio-group">
+                            <label><input type="radio" name="adjust-type" value="set" checked> Establecer cantidad exacta</label>
+                            <label><input type="radio" name="adjust-type" value="add"> Agregar al stock actual</label>
+                            <label><input type="radio" name="adjust-type" value="subtract"> Restar del stock actual</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Cantidad:</label>
+                        <input type="number" id="adjust-quantity" min="0" step="0.01" placeholder="0">
+                    </div>
+                    <div class="form-group">
+                        <label>Motivo del Ajuste:</label>
+                        <textarea id="adjust-reason" placeholder="Describe el motivo del ajuste de stock..."></textarea>
+                    </div>
+                    <div class="stock-actions">
+                        <button id="apply-stock-adjust" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Aplicar Ajuste
+                        </button>
+                        <button class="btn btn-secondary close-modal">
+                            Cancelar
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
