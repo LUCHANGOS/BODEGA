@@ -226,15 +226,10 @@ function showDashboard() {
     // Configurar UI según el rol
     if (APP_STATE.currentUser.role === 'admin') {
         document.body.classList.add('admin');
-        
-        // Solo Zaida puede ver el tab de autorización
-        const authTab = document.querySelector('[data-tab="autorizar"]');
-        if (APP_STATE.currentUser.username === 'zaida') {
-            authTab.style.display = 'block';
-        } else {
-            authTab.style.display = 'none';
-        }
     }
+    
+    // Actualizar visibilidad de tabs según usuario
+    updateTabVisibility();
     
     document.getElementById('user-name').textContent = APP_STATE.currentUser.name;
     updateNotifications();
@@ -1459,6 +1454,19 @@ function generateDeliveryVoucher(request) {
     doc.save(`vale-retiro-${request.id}.pdf`);
 }
 
+// Actualizar visibilidad de tabs según usuario
+function updateTabVisibility() {
+    if (APP_STATE.currentUser && APP_STATE.currentUser.role === 'admin') {
+        // Solo Zaida puede ver el tab de autorización
+        const authTab = document.querySelector('[data-tab="autorizar"]');
+        if (APP_STATE.currentUser.username === 'zaida') {
+            authTab.style.display = 'block';
+        } else {
+            authTab.style.display = 'none';
+        }
+    }
+}
+
 // Notificaciones
 function updateNotifications() {
     // Solo Zaida puede ver notificaciones de solicitudes pendientes
@@ -1476,6 +1484,9 @@ function updateNotifications() {
         // Otros usuarios no ven notificaciones
         document.getElementById('notifications').style.display = 'none';
     }
+    
+    // También actualizar visibilidad de tabs
+    updateTabVisibility();
 }
 
 // Manejo de archivos
