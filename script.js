@@ -1182,49 +1182,313 @@ function processBarcodeInput(barcode) {
 
 function openScanner(callback) {
     APP_STATE.scannerCallback = callback;
-    document.getElementById('scanner-modal').classList.add('active');
+    const scannerModal = document.getElementById('scanner-modal');
+    scannerModal.classList.add('active');
     
     const container = document.getElementById('scanner-container');
     container.innerHTML = `
-        <div>
-            <p>Posicione el código de barras frente a la cámara</p>
-            <div id="qr-reader" style="width: 100%; max-width: 400px; margin: 0 auto;"></div>
+        <div class="scanner-wrapper">
+            <div class="scanner-header">
+                <h4><i class="fas fa-camera"></i> Escanear Código de Barras</h4>
+                <p class="scanner-instructions">Enfoque el código de barras dentro del marco</p>
+            </div>
+            <div id="qr-reader" class="qr-reader-container"></div>
+            <div class="scanner-controls">
+                <button id="toggle-camera" class="btn btn-secondary">
+                    <i class="fas fa-sync-alt"></i> Cambiar Cámara
+                </button>
+                <button id="scanner-flashlight" class="btn btn-secondary">
+                    <i class="fas fa-flashlight"></i> Flash
+                </button>
+            </div>
+            <div class="scanner-fallback">
+                <p><strong>¿Problemas con la cámara?</strong></p>
+                <input type="text" id="manual-code-input" placeholder="Ingrese el código manualmente" class="manual-input">
+                <button id="manual-submit" class="btn btn-primary">Usar Código</button>
+            </div>
         </div>
     `;
     
     if (typeof Html5Qrcode !== 'undefined') {
-        APP_STATE.scanner = new Html5Qrcode("qr-reader");
-        
-        APP_STATE.scanner.start(
-            { facingMode: "environment" },
-            {
-                fps: 10,
-                qrbox: { width: 250, height: 150 }
-            },
-            (decodedText, decodedResult) => {
-                callback(decodedText);
-                closeScanner();
-            },
-            (errorMessage) => {
-                // Ignorar errores de escaneo continuo
-            }
-        ).catch(err => {
-            console.error('Error iniciando cámara:', err);
-            container.innerHTML = `
-                <div>
-                    <p><i class="fas fa-exclamation-triangle"></i> No se pudo acceder a la cámara</p>
-                    <p>Use la pistola de código de barras USB o ingrese el código manualmente</p>
-                </div>
-            `;
-        });
+        initializeMobileScanner(callback);
     } else {
-        container.innerHTML = `
-            <div>
-                <p><i class="fas fa-exclamation-triangle"></i> Escáner no disponible</p>
-                <p>Use la pistola de código de barras USB o ingrese el código manualmente</p>
-            </div>
-        `;
+        showScannerFallback();
     }
+    
+    // Configurar entrada manual
+    setupManualCodeInput(callback);
+}
+
+function initializeMobileScanner(callback) {
+    APP_STATE.scanner = new Html5Qrcode("qr-reader");
+    
+    // Detectar dispositivos móviles
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // Configuración optimizada para móviles
+    const config = {
+        fps: isMobile ? 15 : 10,
+        qrbox: {
+            width: isMobile ? Math.min(300, window.innerWidth * 0.8) : 250,
+            height: isMobile ? 200 : 150
+        },
+        aspectRatio: isMobile ? 1.5 : 1.67,
+        disableFlip: false,
+        videoConstraints: {
+            facingMode: { ideal: "environment" },
+            focusMode: "auto",
+            advanced: [{
+                focusMode: "continuous"
+            }]
+        }
+    };
+    
+    // Intentar obtener lista de cámaras
+    Html5Qrcode.getCameras().then(cameras => {
+        let cameraId;
+        
+        if (cameras && cameras.length) {
+            // Buscar cámara trasera
+            const backCamera = cameras.find(camera => 
+                camera.label.toLowerCase().includes('back') ||
+                camera.label.toLowerCase().includes('rear') ||
+                camera.label.toLowerCase().includes('environment')
+            );
+            
+            cameraId = backCamera ? backCamera.id : cameras[cameras.length - 1].id;
+            APP_STATE.availableCameras = cameras;
+            APP_STATE.currentCameraIndex = cameras.findIndex(c => c.id === cameraId);
+            
+            // Mostrar botón de cambio de cámara si hay múltiples
+            if (cameras.length > 1) {
+                document.getElementById('toggle-camera').style.display = 'inline-flex';
+            }
+        } else {
+            // Usar constrains por defecto
+            cameraId = { facingMode: "environment" };
+        }
+        
+        startScanning(cameraId, config, callback);
+        
+    }).catch(err => {
+        console.warn('Error obteniendo cámaras:', err);
+        // Fallback con constrains básicos
+        startScanning({ facingMode: "environment" }, config, callback);
+    });
+}
+
+function startScanning(cameraId, config, callback) {
+    APP_STATE.scanner.start(
+        cameraId,
+        config,
+        (decodedText, decodedResult) => {
+            console.log('Código escaneado:', decodedText);
+            
+            // Agregar vibración en móviles
+            if (navigator.vibrate) {
+                navigator.vibrate(200);
+            }
+            
+            // Feedback visual
+            showScanSuccess();
+            
+            callback(decodedText);
+            closeScanner();
+        },
+        (errorMessage) => {
+            // Mostrar errores solo si son críticos
+            if (errorMessage.includes('NotAllowedError') || errorMessage.includes('Permission')) {
+                showScannerPermissionError();
+            }
+        }
+    ).catch(err => {
+        console.error('Error iniciando escáner:', err);
+        showScannerError(err);
+    });
+}
+
+function showScanSuccess() {
+    const reader = document.getElementById('qr-reader');
+    if (reader) {
+        reader.style.border = '3px solid #10b981';
+        setTimeout(() => {
+            if (reader) reader.style.border = '';
+        }, 1000);
+    }
+}
+
+function showScannerError(error) {
+    const container = document.getElementById('scanner-container');
+    let errorMessage = 'Error al acceder a la cámara';
+    let suggestion = '';
+    
+    if (error.name === 'NotAllowedError' || error.message.includes('Permission')) {
+        errorMessage = 'Permisos de cámara denegados';
+        suggestion = 'Por favor, permita el acceso a la cámara y recargue la página.';
+    } else if (error.name === 'NotFoundError') {
+        errorMessage = 'No se encontró cámara';
+        suggestion = 'Asegúrese de que su dispositivo tenga cámara disponible.';
+    } else if (error.name === 'NotReadableError') {
+        errorMessage = 'Cámara en uso por otra aplicación';
+        suggestion = 'Cierre otras aplicaciones que puedan estar usando la cámara.';
+    }
+    
+    container.innerHTML = `
+        <div class="scanner-error">
+            <div class="error-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h4>${errorMessage}</h4>
+            <p>${suggestion}</p>
+            <div class="error-actions">
+                <button id="retry-camera" class="btn btn-primary">
+                    <i class="fas fa-redo"></i> Reintentar
+                </button>
+                <button id="use-manual" class="btn btn-secondary">
+                    <i class="fas fa-keyboard"></i> Ingreso Manual
+                </button>
+            </div>
+            <div class="scanner-fallback">
+                <input type="text" id="manual-code-input" placeholder="Ingrese el código manualmente" class="manual-input">
+                <button id="manual-submit" class="btn btn-success">Usar Código</button>
+            </div>
+        </div>
+    `;
+    
+    // Configurar botones de error
+    document.getElementById('retry-camera').addEventListener('click', () => {
+        initializeMobileScanner(APP_STATE.scannerCallback);
+    });
+    
+    document.getElementById('use-manual').addEventListener('click', () => {
+        document.querySelector('.scanner-fallback').style.display = 'block';
+    });
+    
+    setupManualCodeInput(APP_STATE.scannerCallback);
+}
+
+function showScannerPermissionError() {
+    const container = document.getElementById('scanner-container');
+    container.innerHTML = `
+        <div class="scanner-permission-error">
+            <div class="permission-icon">
+                <i class="fas fa-camera"></i>
+                <i class="fas fa-slash"></i>
+            </div>
+            <h4>Se requiere acceso a la cámara</h4>
+            <div class="permission-steps">
+                <p><strong>Para habilitar la cámara:</strong></p>
+                <ol>
+                    <li>Toque el ícono de <strong>🔒</strong> en la barra de direcciones</li>
+                    <li>Seleccione <strong>"Permitir" para Cámara</strong></li>
+                    <li>Recargue la página</li>
+                </ol>
+            </div>
+            <div class="permission-actions">
+                <button id="reload-page" class="btn btn-primary">
+                    <i class="fas fa-refresh"></i> Recargar Página
+                </button>
+            </div>
+            <div class="scanner-fallback">
+                <h5>Alternativa: Ingreso Manual</h5>
+                <input type="text" id="manual-code-input" placeholder="Código del producto" class="manual-input">
+                <button id="manual-submit" class="btn btn-success">Usar Código</button>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('reload-page').addEventListener('click', () => {
+        window.location.reload();
+    });
+    
+    setupManualCodeInput(APP_STATE.scannerCallback);
+}
+
+function setupManualCodeInput(callback) {
+    const manualInput = document.getElementById('manual-code-input');
+    const manualSubmit = document.getElementById('manual-submit');
+    
+    if (manualInput && manualSubmit) {
+        const handleManualInput = () => {
+            const code = manualInput.value.trim();
+            if (code) {
+                callback(code);
+                closeScanner();
+            } else {
+                showToast('Por favor ingrese un código válido', 'warning');
+                manualInput.focus();
+            }
+        };
+        
+        manualSubmit.addEventListener('click', handleManualInput);
+        
+        manualInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleManualInput();
+            }
+        });
+        
+        // Auto-focus en dispositivos móviles después de un delay
+        setTimeout(() => {
+            manualInput.focus();
+        }, 500);
+    }
+}
+
+function setupCameraControls() {
+    const toggleButton = document.getElementById('toggle-camera');
+    const flashButton = document.getElementById('scanner-flashlight');
+    
+    if (toggleButton) {
+        toggleButton.addEventListener('click', toggleCamera);
+    }
+    
+    if (flashButton) {
+        flashButton.addEventListener('click', toggleFlashlight);
+    }
+}
+
+function toggleCamera() {
+    if (APP_STATE.availableCameras && APP_STATE.availableCameras.length > 1) {
+        APP_STATE.currentCameraIndex = (APP_STATE.currentCameraIndex + 1) % APP_STATE.availableCameras.length;
+        const newCamera = APP_STATE.availableCameras[APP_STATE.currentCameraIndex];
+        
+        if (APP_STATE.scanner) {
+            APP_STATE.scanner.stop().then(() => {
+                const config = {
+                    fps: 15,
+                    qrbox: { width: 300, height: 200 },
+                    disableFlip: false
+                };
+                startScanning(newCamera.id, config, APP_STATE.scannerCallback);
+            });
+        }
+    }
+}
+
+function toggleFlashlight() {
+    // Nota: el control de flash no está disponible en la mayoría de navegadores web
+    showToast('Control de flash no disponible en navegador web', 'info');
+}
+
+function showScannerFallback() {
+    const container = document.getElementById('scanner-container');
+    container.innerHTML = `
+        <div class="scanner-fallback-only">
+            <div class="fallback-icon">
+                <i class="fas fa-barcode"></i>
+            </div>
+            <h4>Escáner no disponible</h4>
+            <p>Su navegador no soporta el escáner de códigos de barras</p>
+            <div class="fallback-input">
+                <label>Ingrese el código manualmente:</label>
+                <input type="text" id="manual-code-input" placeholder="Código del producto" class="manual-input">
+                <button id="manual-submit" class="btn btn-primary">Usar Código</button>
+            </div>
+        </div>
+    `;
+    
+    setupManualCodeInput(APP_STATE.scannerCallback);
 }
 
 function closeScanner() {

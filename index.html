@@ -29,65 +29,34 @@
     <div id="login-screen" class="screen active">
         <div class="login-container">
             <div class="login-header">
-                <h1><i class="fas fa-warehouse"></i> Control de Bodega</h1>
-                <p>L.A.N.G. - Sistema de Inventario</p>
+                <div class="logo-container">
+                    <div class="logo-icon">
+                        <i class="fas fa-warehouse"></i>
+                    </div>
+                    <div class="logo-text">
+                        <h1>Sistema de Bodega</h1>
+                        <p>Control de Inventario</p>
+                    </div>
+                </div>
             </div>
+            
             <form id="login-form">
                 <div class="input-group">
                     <i class="fas fa-user"></i>
-                    <input type="text" id="username" placeholder="Usuario" required>
+                    <input type="email" id="username" placeholder="Correo electrónico" required>
                 </div>
                 <div class="input-group">
                     <i class="fas fa-lock"></i>
                     <input type="password" id="password" placeholder="Contraseña" required>
                 </div>
                 <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-sign-in-alt"></i> Ingresar
+                    <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
                 </button>
-            </form>
-            
-            <!-- Usuarios de Demostración -->
-            <div class="demo-users">
-                <h3><i class="fas fa-users"></i> Usuarios Disponibles</h3>
-                <div class="user-cards">
-                    <div class="user-card admin" onclick="fillLogin('zaida.rassi@lang.com', 'ZaidaRassi2024!')">
-                        <div class="user-icon"><i class="fas fa-user-shield"></i></div>
-                        <div class="user-info">
-                            <div class="user-name">Administrador</div>
-                            <div class="user-email">zaida.rassi@lang.com</div>
-                            <div class="user-role">Acceso Completo</div>
-                        </div>
-                    </div>
-                    
-                    <div class="user-card" onclick="fillLogin('carlos@lang.com', 'Carlos2024')">
-                        <div class="user-icon"><i class="fas fa-fire"></i></div>
-                        <div class="user-info">
-                            <div class="user-name">Carlos - Soldadura</div>
-                            <div class="user-email">carlos@lang.com</div>
-                            <div class="user-role">Solicitudes</div>
-                        </div>
-                    </div>
-                    
-                    <div class="user-card" onclick="fillLogin('cristian@lang.com', 'Cristian2024')">
-                        <div class="user-icon"><i class="fas fa-bolt"></i></div>
-                        <div class="user-info">
-                            <div class="user-name">Cristian - Eléctrico</div>
-                            <div class="user-email">cristian@lang.com</div>
-                            <div class="user-role">Solicitudes</div>
-                        </div>
-                    </div>
-                    
-                    <div class="user-card" onclick="fillLogin('juan@lang.com', 'Juan2024')">
-                        <div class="user-icon"><i class="fas fa-paint-brush"></i></div>
-                        <div class="user-info">
-                            <div class="user-name">Juan - Pintura</div>
-                            <div class="user-email">juan@lang.com</div>
-                            <div class="user-role">Solicitudes</div>
-                        </div>
-                    </div>
+                
+                <div class="login-footer">
+                    <p class="demo-text">🔐 Demo: admin@bodega.com / admin123</p>
                 </div>
-                <p class="demo-note">👆 Haz clic en cualquier usuario para iniciar sesión automáticamente</p>
-            </div>
+            </form>
             
             <div id="login-error" class="error-message"></div>
             
