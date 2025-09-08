@@ -1,0 +1,40 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!-- Fondo circular -->
+  <circle cx="100" cy="100" r="95" fill="#2563eb" stroke="#1d4ed8" stroke-width="3"/>
+  
+  <!-- Base del edificio -->
+  <rect x="40" y="120" width="120" height="60" fill="#f59e0b" rx="4"/>
+  
+  <!-- Techo -->
+  <polygon points="35,120 100,80 165,120" fill="#dc2626"/>
+  <polygon points="35,120 100,80 165,120" fill="#ef4444" opacity="0.7"/>
+  
+  <!-- Puerta -->
+  <rect x="80" y="140" width="25" height="40" fill="#92400e" rx="2"/>
+  <rect x="105" y="140" width="15" height="40" fill="#a3a3a3" rx="2"/>
+  <circle cx="102" cy="160" r="2" fill="#4b5563"/>
+  
+  <!-- Ventanas -->
+  <rect x="50" y="135" width="20" height="15" fill="#3b82f6" rx="2"/>
+  <rect x="130" y="135" width="20" height="15" fill="#3b82f6" rx="2"/>
+  <line x1="60" y1="135" x2="60" y2="150" stroke="#1e40af" stroke-width="1"/>
+  <line x1="50" y1="142.5" x2="70" y2="142.5" stroke="#1e40af" stroke-width="1"/>
+  <line x1="140" y1="135" x2="140" y2="150" stroke="#1e40af" stroke-width="1"/>
+  <line x1="130" y1="142.5" x2="150" y2="142.5" stroke="#1e40af" stroke-width="1"/>
+  
+  <!-- Letrero -->
+  <rect x="60" y="100" width="80" height="20" fill="#ffffff" rx="3" stroke="#d1d5db" stroke-width="1"/>
+  <text x="100" y="113" font-family="Arial, sans-serif" font-size="12" font-weight="bold" text-anchor="middle" fill="#1f2937">BODEGA</text>
+  
+  <!-- Cajas apiladas -->
+  <rect x="125" y="155" width="12" height="10" fill="#8b5cf6" rx="1"/>
+  <rect x="125" y="145" width="12" height="10" fill="#a855f7" rx="1"/>
+  <rect x="140" y="165" width="10" height="8" fill="#f59e0b" rx="1"/>
+  <rect x="140" y="157" width="10" height="8" fill="#fbbf24" rx="1"/>
+  
+  <!-- Detalles del techo -->
+  <ellipse cx="100" cy="78" rx="8" ry="4" fill="#991b1b"/>
+  
+  <!-- Sombra -->
+  <ellipse cx="100" cy="185" rx="50" ry="8" fill="#000000" opacity="0.2"/>
+</svg>
