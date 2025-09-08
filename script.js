@@ -1209,14 +1209,87 @@ function openScanner(callback) {
         </div>
     `;
     
+    // Esperar un momento para que el DOM se actualice
+    setTimeout(() => {
+        // Verificar si la librería está disponible, sino intentar cargarla
+        checkAndInitializeScanner(callback);
+        
+        // Configurar entrada manual
+        setupManualCodeInput(callback);
+    }, 100);
+}
+
+function checkAndInitializeScanner(callback) {
+    // Verificar si Html5Qrcode está disponible
     if (typeof Html5Qrcode !== 'undefined') {
+        console.log('Html5Qrcode disponible, inicializando escáner móvil');
         initializeMobileScanner(callback);
-    } else {
-        showScannerFallback();
+        return;
     }
     
-    // Configurar entrada manual
-    setupManualCodeInput(callback);
+    // Si no está disponible, intentar cargarla dinámicamente
+    console.log('Html5Qrcode no disponible, intentando cargar dinámicamente');
+    
+    // Mostrar estado de carga
+    showScannerLoading();
+    
+    // Intentar cargar la librería si no existe el script
+    const existingScript = document.querySelector('script[src*="html5-qrcode"]');
+    if (!existingScript) {
+        loadHtml5QrcodeScript(callback);
+    } else {
+        // El script existe pero no se ha cargado aún, esperar un poco más
+        waitForHtml5Qrcode(callback, 0);
+    }
+}
+
+function loadHtml5QrcodeScript(callback) {
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js';
+    script.onload = function() {
+        console.log('Html5Qrcode cargado dinámicamente');
+        waitForHtml5Qrcode(callback, 0);
+    };
+    script.onerror = function() {
+        console.error('Error cargando Html5Qrcode');
+        showScannerFallback();
+    };
+    document.head.appendChild(script);
+}
+
+function waitForHtml5Qrcode(callback, attempts) {
+    const maxAttempts = 10;
+    
+    if (typeof Html5Qrcode !== 'undefined') {
+        console.log('Html5Qrcode disponible después de esperar');
+        initializeMobileScanner(callback);
+        return;
+    }
+    
+    if (attempts < maxAttempts) {
+        setTimeout(() => {
+            waitForHtml5Qrcode(callback, attempts + 1);
+        }, 500);
+    } else {
+        console.log('Html5Qrcode no disponible después de esperar, usando fallback');
+        showScannerFallback();
+    }
+}
+
+function showScannerLoading() {
+    const container = document.getElementById('qr-reader');
+    if (container) {
+        container.innerHTML = `
+            <div class="scanner-loading">
+                <div class="loading-icon">
+                    <i class="fas fa-camera"></i>
+                    <div class="spinner"></div>
+                </div>
+                <p>Cargando escáner...</p>
+                <small>Por favor espere</small>
+            </div>
+        `;
+    }
 }
 
 function initializeMobileScanner(callback) {
@@ -1925,30 +1998,266 @@ function updateTabVisibility() {
 
 // Notificaciones
 function updateNotifications() {
-    // Debug: Verificar usuario actual
-    console.log('Usuario actual:', APP_STATE.currentUser);
+    console.log('Actualizando notificaciones...');
     
-    // Solo Zaida puede ver notificaciones de solicitudes pendientes
-    if (APP_STATE.currentUser && APP_STATE.currentUser.role === 'admin' && APP_STATE.currentUser.username === 'zaida') {
-        const pendingCount = DATABASE.requests.filter(r => r.status === 'pending').length;
-        console.log('Zaida logueada - Solicitudes pendientes:', pendingCount);
+    let totalNotifications = 0;
+    const notifications = [];
+    
+    // Solo admin (Zaida y Luis) pueden ver notificaciones
+    if (APP_STATE.currentUser && APP_STATE.currentUser.role === 'admin') {
         
-        document.getElementById('notification-count').textContent = pendingCount;
-        document.getElementById('pending-badge').textContent = pendingCount;
-        
-        if (pendingCount > 0) {
-            document.getElementById('notifications').style.display = 'block';
-        } else {
-            document.getElementById('notifications').style.display = 'none';
+        // 1. Solicitudes pendientes (solo Zaida)
+        if (APP_STATE.currentUser.username === 'zaida') {
+            const pendingRequests = DATABASE.requests.filter(r => r.status === 'pending');
+            
+            pendingRequests.forEach(request => {
+                notifications.push({
+                    id: `request-${request.id}`,
+                    type: 'pending-request',
+                    title: 'Solicitud Pendiente',
+                    message: `${request.userName} solicita ${request.products.length} productos`,
+                    timestamp: request.createdAt,
+                    priority: 'high',
+                    action: () => {
+                        showTab('autorizar');
+                        setTimeout(() => scrollToRequest(request.id), 300);
+                    }
+                });
+            });
+            
+            totalNotifications += pendingRequests.length;
         }
+        
+        // 2. Stock bajo (ambos admin)
+        const lowStockProducts = DATABASE.products.filter(p => p.stock <= p.minStock);
+        
+        lowStockProducts.forEach(product => {
+            notifications.push({
+                id: `stock-${product.id}`,
+                type: 'low-stock',
+                title: 'Stock Bajo',
+                message: `${product.code} - ${product.name} (${product.stock} ${product.unit} disponibles)`,
+                timestamp: new Date().toISOString(),
+                priority: product.stock === 0 ? 'critical' : 'medium',
+                action: () => {
+                    showTab('inventario');
+                    setTimeout(() => {
+                        document.getElementById('inventory-search').value = product.code;
+                        filterInventory({ target: { value: product.code } });
+                        scrollToProduct(product.id);
+                    }, 300);
+                }
+            });
+        });
+        
+        totalNotifications += lowStockProducts.length;
+        
+        // 3. Entregas pendientes de procesar
+        if (APP_STATE.currentUser.username === 'zaida') {
+            const approvedRequests = DATABASE.requests.filter(r => 
+                r.status === 'approved' && 
+                !r.deliveredAt && 
+                new Date() - new Date(r.approvedAt) > 30 * 60 * 1000 // Más de 30 min
+            );
+            
+            approvedRequests.forEach(request => {
+                notifications.push({
+                    id: `delivery-${request.id}`,
+                    type: 'pending-delivery',
+                    title: 'Entrega Pendiente',
+                    message: `Entrega aprobada hace ${getTimeAgo(request.approvedAt)} para ${request.userName}`,
+                    timestamp: request.approvedAt,
+                    priority: 'medium',
+                    action: () => {
+                        showTab('autorizar');
+                        setTimeout(() => scrollToRequest(request.id), 300);
+                    }
+                });
+            });
+            
+            totalNotifications += approvedRequests.length;
+        }
+    }
+    
+    // Actualizar contador
+    document.getElementById('notification-count').textContent = totalNotifications;
+    document.getElementById('pending-badge').textContent = DATABASE.requests.filter(r => r.status === 'pending').length;
+    
+    // Mostrar/ocultar campana
+    if (totalNotifications > 0) {
+        document.getElementById('notifications').style.display = 'block';
+        document.getElementById('notifications').classList.add('has-notifications');
     } else {
-        console.log('Usuario no es Zaida o no es admin');
-        // Otros usuarios no ven notificaciones
+        document.getElementById('notifications').style.display = 'block'; // Siempre visible para admin
+        document.getElementById('notifications').classList.remove('has-notifications');
+    }
+    
+    // Actualizar lista de notificaciones
+    updateNotificationsList(notifications);
+    
+    // Para usuarios no admin, ocultar notificaciones
+    if (!APP_STATE.currentUser || APP_STATE.currentUser.role !== 'admin') {
         document.getElementById('notifications').style.display = 'none';
     }
     
-    // También actualizar visibilidad de tabs
     updateTabVisibility();
+}
+
+function updateNotificationsList(notifications) {
+    const notificationsList = document.getElementById('notifications-list');
+    
+    if (notifications.length === 0) {
+        notificationsList.innerHTML = `
+            <div class="notification-empty">
+                <i class="fas fa-bell-slash"></i>
+                <p>No hay notificaciones</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Ordenar por prioridad y fecha
+    notifications.sort((a, b) => {
+        const priorityOrder = { critical: 3, high: 2, medium: 1 };
+        const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+        if (priorityDiff !== 0) return priorityDiff;
+        return new Date(b.timestamp) - new Date(a.timestamp);
+    });
+    
+    notificationsList.innerHTML = notifications.map(notification => `
+        <div class="notification-item ${notification.type} ${notification.priority}" 
+             onclick="handleNotificationClick('${notification.id}')" 
+             data-action-handler="${notification.id}">
+            <div class="notification-icon">
+                ${getNotificationIcon(notification.type)}
+            </div>
+            <div class="notification-content">
+                <div class="notification-title">${notification.title}</div>
+                <div class="notification-message">${notification.message}</div>
+                <div class="notification-time">${getTimeAgo(notification.timestamp)}</div>
+            </div>
+            <div class="notification-priority ${notification.priority}">
+                ${getPriorityIcon(notification.priority)}
+            </div>
+        </div>
+    `).join('');
+    
+    // Guardar handlers para las acciones
+    APP_STATE.notificationHandlers = {};
+    notifications.forEach(notification => {
+        APP_STATE.notificationHandlers[notification.id] = notification.action;
+    });
+}
+
+function getNotificationIcon(type) {
+    const icons = {
+        'pending-request': '<i class="fas fa-clock"></i>',
+        'low-stock': '<i class="fas fa-exclamation-triangle"></i>',
+        'pending-delivery': '<i class="fas fa-truck"></i>',
+        'stock-out': '<i class="fas fa-times-circle"></i>'
+    };
+    return icons[type] || '<i class="fas fa-info-circle"></i>';
+}
+
+function getPriorityIcon(priority) {
+    const icons = {
+        critical: '<i class="fas fa-exclamation"></i>',
+        high: '<i class="fas fa-arrow-up"></i>',
+        medium: '<i class="fas fa-minus"></i>'
+    };
+    return icons[priority] || '';
+}
+
+function getTimeAgo(timestamp) {
+    const now = new Date();
+    const time = new Date(timestamp);
+    const diffInMinutes = Math.floor((now - time) / 60000);
+    
+    if (diffInMinutes < 1) return 'Ahora';
+    if (diffInMinutes < 60) return `${diffInMinutes}m`;
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)}h`;
+    return `${Math.floor(diffInMinutes / 1440)}d`;
+}
+
+// Mostrar/ocultar menú de notificaciones
+function showNotificationsMenu() {
+    const dropdown = document.getElementById('notifications-dropdown');
+    const isVisible = dropdown.classList.contains('active');
+    
+    // Cerrar si está abierto, abrir si está cerrado
+    if (isVisible) {
+        dropdown.classList.remove('active');
+        document.removeEventListener('click', closeNotificationsOnOutsideClick);
+    } else {
+        dropdown.classList.add('active');
+        // Cerrar al hacer click afuera
+        setTimeout(() => {
+            document.addEventListener('click', closeNotificationsOnOutsideClick);
+        }, 100);
+    }
+}
+
+function closeNotificationsOnOutsideClick(event) {
+    const dropdown = document.getElementById('notifications-dropdown');
+    const notifications = document.getElementById('notifications');
+    
+    if (!notifications.contains(event.target)) {
+        dropdown.classList.remove('active');
+        document.removeEventListener('click', closeNotificationsOnOutsideClick);
+    }
+}
+
+// Manejar click en notificación
+function handleNotificationClick(notificationId) {
+    console.log('Click en notificación:', notificationId);
+    
+    // Ejecutar acción asociada
+    if (APP_STATE.notificationHandlers && APP_STATE.notificationHandlers[notificationId]) {
+        APP_STATE.notificationHandlers[notificationId]();
+    }
+    
+    // Cerrar menú de notificaciones
+    const dropdown = document.getElementById('notifications-dropdown');
+    dropdown.classList.remove('active');
+    document.removeEventListener('click', closeNotificationsOnOutsideClick);
+    
+    // Marcar como leída (opcional)
+    markNotificationAsRead(notificationId);
+}
+
+// Marcar todas las notificaciones como leídas
+function markAllNotificationsRead() {
+    console.log('Marcando todas las notificaciones como leídas');
+    // Aquí podrías implementar lógica para marcar como leídas
+    
+    // Por ahora, simplemente cerrar el menú
+    const dropdown = document.getElementById('notifications-dropdown');
+    dropdown.classList.remove('active');
+    document.removeEventListener('click', closeNotificationsOnOutsideClick);
+}
+
+function markNotificationAsRead(notificationId) {
+    // Implementar lógica para marcar como leída
+    console.log('Marcando notificación como leída:', notificationId);
+}
+
+// Funciones de navegación
+function scrollToRequest(requestId) {
+    const requestElement = document.querySelector(`[data-request-id="${requestId}"]`);
+    if (requestElement) {
+        requestElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        requestElement.classList.add('highlight');
+        setTimeout(() => requestElement.classList.remove('highlight'), 3000);
+    }
+}
+
+function scrollToProduct(productId) {
+    const productElement = document.querySelector(`[data-product-id="${productId}"]`);
+    if (productElement) {
+        productElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        productElement.classList.add('highlight');
+        setTimeout(() => productElement.classList.remove('highlight'), 3000);
+    }
 }
 
 // Manejo de archivos
