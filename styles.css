@@ -211,6 +211,146 @@ body {
     font-style: italic;
 }
 
+/* Sección de instalación PWA */
+.install-pwa-section {
+    margin-top: 2rem;
+    max-width: 600px;
+    width: 100%;
+}
+
+.install-card {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    color: white;
+    box-shadow: var(--shadow-xl);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    animation: fadeInUp 0.6s ease-out;
+}
+
+.install-icon {
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    flex-shrink: 0;
+    animation: pulse 2s infinite;
+}
+
+.install-content {
+    flex: 1;
+}
+
+.install-content h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.install-content p {
+    margin: 0 0 1rem 0;
+    opacity: 0.9;
+    font-size: 1rem;
+    line-height: 1.4;
+}
+
+.btn-install {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--radius);
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition-bounce);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    backdrop-filter: blur(10px);
+    margin-bottom: 1rem;
+}
+
+.btn-install:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+.install-steps {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius);
+    backdrop-filter: blur(10px);
+}
+
+.install-steps small {
+    color: rgba(255, 255, 255, 0.9);
+    line-height: 1.4;
+    font-size: 0.85rem;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+/* Responsive para instalación PWA */
+@media (max-width: 768px) {
+    .install-card {
+        flex-direction: column;
+        text-align: center;
+        padding: 1.5rem;
+    }
+    
+    .install-icon {
+        width: 60px;
+        height: 60px;
+        font-size: 2rem;
+    }
+    
+    .install-content h3 {
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .install-card {
+        padding: 1rem;
+    }
+    
+    .install-steps {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .install-steps small {
+        font-size: 0.8rem;
+    }
+}
+
 .input-group {
     position: relative;
     margin-bottom: 1.5rem;

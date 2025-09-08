@@ -1,16 +1,42 @@
 {
   "name": "Control de Bodega L.A.N.G.",
   "short_name": "Bodega LANG",
-  "description": "Sistema de Control de Inventario y Materiales",
-  "start_url": "./index.html",
+  "description": "Sistema de Control de Inventario y Materiales para L.A.N.G.",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#1e3a8a",
   "theme_color": "#3b82f6",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "scope": "./",
   "lang": "es-ES",
-  "categories": ["productivity", "business"],
+  "dir": "ltr",
+  "categories": ["productivity", "business", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiByeD0iNiIgZmlsbD0iIzFlM2E4YSIvPgo8cGF0aCBkPSJNMTIgMThoMjR2NGgtMjRWMThabTAgNmgyNHY0SDEyVjI0Wm0wIDZoMTZ2NEgxMlYzMFoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0zMiAxMkgzNlYzNkgzMlYxMloiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo=",
+      "sizes": "48x48",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzIiIGhlaWdodD0iNzIiIHZpZXdCb3g9IjAgMCA3MiA3MiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjcyIiBoZWlnaHQ9IjcyIiByeD0iOSIgZmlsbD0iIzFlM2E4YSIvPgo8cGF0aCBkPSJNMTggMjdoMzZ2NkgxOFYyN1ptMCA5aDM2djZIMThWMzZabTAgOWgyNHY2SDE4VjQ1WiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTQ4IDE4SDU0VjU0SDQ4VjE4WiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cg==",
+      "sizes": "72x72",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCA5NiA5NiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9Ijk2IiBoZWlnaHQ9Ijk2IiByeD0iMTIiIGZpbGw9IiMxZTNhOGEiLz4KPHBhdGggZD0iTTI0IDM2aDQ4djhIMjRWMzZabTAgMTJoNDh2OEgyNFY0OFptMCAxMmgzMnY4SDI0VjYwWiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTY0IDI0SDcyVjcySDY0VjI0WiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cg==",
+      "sizes": "96x96",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTQ0IiBoZWlnaHQ9IjE0NCIgdmlld0JveD0iMCAwIDE0NCAxNDQiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxNDQiIGhlaWdodD0iMTQ0IiByeD0iMTgiIGZpbGw9IiMxZTNhOGEiLz4KPHBhdGggZD0iTTM2IDU0aDcydjEySDM2VjU0Wm0wIDE4aDcydjEySDM2VjcyWm0wIDE4aDQ4djEySDM2VjkwWiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTk2IDM2SDEwOFYxMDhIOTZWMzZaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K",
+      "sizes": "144x144",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiMxZTNhOGEiLz4KPHBhdGggZD0iTTQ4IDcyaDk2djE2SDQ4VjcyWm0wIDI0aDk2djE2SDQ4Vjk2Wm0wIDI0aDY0djE2SDQ4VjEyMFoiIGZpbGw9IndoaXRlIi8+CjxwYXRoIGQ9Ik0xMjggNDhIMTQ0VjE0NEgxMjhWNDhaIiBmaWxsPSJ3aGl0ZSIvPgo8L3N2Zz4K",
       "sizes": "192x192",
@@ -22,6 +48,14 @@
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIwIiBoZWlnaHQ9IjU2OCIgdmlld0JveD0iMCAwIDMyMCA1NjgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMjAiIGhlaWdodD0iNTY4IiBmaWxsPSJ1cmwoI2dyYWRpZW50KSIvPgo8cmVjdCB4PSI0MCIgeT0iMTAwIiB3aWR0aD0iMjQwIiBoZWlnaHQ9IjQwIiByeD0iOCIgZmlsbD0iIzMxNDE1OSIvPgo8cmVjdCB4PSI0MCIgeT0iMTYwIiB3aWR0aD0iMjQwIiBoZWlnaHQ9IjQwIiByeD0iOCIgZmlsbD0iIzMxNDE1OSIvPgo8cmVjdCB4PSI0MCIgeT0iMjIwIiB3aWR0aD0iMjQwIiBoZWlnaHQ9IjQwIiByeD0iOCIgZmlsbD0iIzM0ODJmNiIvPgo8dGV4dCB4PSIxNjAiIHk9IjUwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZm9udC1mYW1pbHk9InNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTgiIGZvbnQtd2VpZ2h0PSJib2xkIj5Db250cm9sIGRlIEJvZGVnYTwvdGV4dD4KPGJ1dDAKPGRlZnM+CjxsaW5lYXJHcmFkaWVudCBpZD0iZ3JhZGllbnQiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPgo8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjNjY3ZWVhIi8+CjxzdG9wIG9mZnNldD0iMTAwJSIgc3RvcC1jb2xvcj0iIzc2NGJhMiIvPgo8L2xpbmVhckdyYWRpZW50Pgo8L2RlZnM+Cjwvc3ZnPgo=",
+      "sizes": "320x568",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
     }
   ]
 }

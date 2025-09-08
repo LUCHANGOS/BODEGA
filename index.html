@@ -90,6 +90,29 @@
             </div>
             
             <div id="login-error" class="error-message"></div>
+            
+            <!-- Botón de Instalación PWA -->
+            <div id="install-pwa-button" class="install-pwa-section hidden">
+                <div class="install-card">
+                    <div class="install-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div class="install-content">
+                        <h3>¡Instalar como App!</h3>
+                        <p>Instala la aplicación en tu dispositivo para un acceso rápido y funcionalidad offline</p>
+                        <button id="install-app-btn" class="btn btn-install">
+                            <i class="fas fa-download"></i> Instalar Aplicación
+                        </button>
+                        <div class="install-steps">
+                            <small>
+                                📱 <strong>Móvil Android:</strong> Toca "Instalar" cuando aparezca<br>
+                                🍎 <strong>iPhone:</strong> Safari → Compartir → "Agregar a pantalla principal"<br>
+                                💻 <strong>PC:</strong> Chrome → Menú → "Instalar Bodega LANG"
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -680,89 +703,127 @@
     
     <!-- PWA Service Worker -->
     <script>
+        // Variables globales para PWA
+        let deferredPrompt = null;
+        let isInstallable = false;
+        
         // Registro del Service Worker para PWA
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
                 navigator.serviceWorker.register('./sw.js')
                     .then(function(registration) {
                         console.log('ServiceWorker registrado correctamente:', registration.scope);
-                        
-                        // Mostrar notificación de instalación PWA
-                        let deferredPrompt;
-                        window.addEventListener('beforeinstallprompt', (e) => {
-                            e.preventDefault();
-                            deferredPrompt = e;
-                            
-                            // Mostrar botón de instalación personalizado después de login
-                            if (document.getElementById('dashboard-screen').classList.contains('active')) {
-                                showInstallButton();
-                            }
-                        });
-                        
-                        // Función para mostrar botón de instalación
-                        function showInstallButton() {
-                            if (deferredPrompt) {
-                                const installBtn = document.createElement('div');
-                                installBtn.id = 'install-pwa';
-                                installBtn.innerHTML = `
-                                    <div class="install-notification">
-                                        <i class="fas fa-mobile-alt"></i>
-                                        <span>¡Instalar como App!</span>
-                                        <button id="install-btn" class="btn btn-primary">Instalar</button>
-                                        <button id="dismiss-install" class="btn btn-secondary">×</button>
-                                    </div>
-                                `;
-                                installBtn.style.cssText = `
-                                    position: fixed;
-                                    top: 20px;
-                                    right: 20px;
-                                    z-index: 10000;
-                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                    color: white;
-                                    padding: 15px;
-                                    border-radius: 12px;
-                                    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-                                    animation: slideIn 0.5s ease-out;
-                                `;
-                                
-                                document.body.appendChild(installBtn);
-                                
-                                // Manejar click de instalación
-                                document.getElementById('install-btn').addEventListener('click', async () => {
-                                    deferredPrompt.prompt();
-                                    const { outcome } = await deferredPrompt.userChoice;
-                                    console.log(`Resultado de instalación: ${outcome}`);
-                                    deferredPrompt = null;
-                                    installBtn.remove();
-                                });
-                                
-                                // Manejar dismissal
-                                document.getElementById('dismiss-install').addEventListener('click', () => {
-                                    installBtn.remove();
-                                });
-                                
-                                // Auto-hide después de 10 segundos
-                                setTimeout(() => {
-                                    if (installBtn.parentNode) {
-                                        installBtn.remove();
-                                    }
-                                }, 10000);
-                            }
-                        }
-                        
-                        // Mostrar cuando el usuario haga login
-                        const originalShowDashboard = window.showDashboard;
-                        if (originalShowDashboard) {
-                            window.showDashboard = function() {
-                                originalShowDashboard();
-                                setTimeout(showInstallButton, 2000);
-                            };
-                        }
                     })
                     .catch(function(err) {
                         console.log('ServiceWorker falló:', err);
                     });
             });
+        }
+        
+        // Detectar si la PWA puede instalarse
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('PWA es instalable');
+            e.preventDefault();
+            deferredPrompt = e;
+            isInstallable = true;
+            showInstallSection();
+        });
+        
+        // Mostrar sección de instalación
+        function showInstallSection() {
+            const installSection = document.getElementById('install-pwa-button');
+            if (installSection && isInstallable) {
+                installSection.classList.remove('hidden');
+                console.log('Mostrando sección de instalación PWA');
+            }
+        }
+        
+        // Ocultar sección de instalación
+        function hideInstallSection() {
+            const installSection = document.getElementById('install-pwa-button');
+            if (installSection) {
+                installSection.classList.add('hidden');
+            }
+        }
+        
+        // Manejar click en botón de instalación
+        document.addEventListener('DOMContentLoaded', function() {
+            const installBtn = document.getElementById('install-app-btn');
+            if (installBtn) {
+                installBtn.addEventListener('click', async () => {
+                    console.log('Click en botón instalar');
+                    
+                    if (deferredPrompt) {
+                        try {
+                            // Mostrar el prompt de instalación
+                            deferredPrompt.prompt();
+                            
+                            // Esperar la respuesta del usuario
+                            const { outcome } = await deferredPrompt.userChoice;
+                            console.log(`Usuario ${outcome === 'accepted' ? 'aceptó' : 'rechazó'} la instalación`);
+                            
+                            if (outcome === 'accepted') {
+                                hideInstallSection();
+                            }
+                            
+                            // Limpiar el prompt
+                            deferredPrompt = null;
+                            isInstallable = false;
+                        } catch (error) {
+                            console.error('Error al instalar PWA:', error);
+                        }
+                    } else {
+                        // Mostrar instrucciones alternativas
+                        showInstallInstructions();
+                    }
+                });
+            }
+        });
+        
+        // Detectar cuando la app ya está instalada
+        window.addEventListener('appinstalled', () => {
+            console.log('PWA instalada exitosamente');
+            hideInstallSection();
+            deferredPrompt = null;
+            isInstallable = false;
+        });
+        
+        // Mostrar instrucciones de instalación manual
+        function showInstallInstructions() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            let instructions = '';
+            
+            if (/android/.test(userAgent) && /chrome/.test(userAgent)) {
+                instructions = '📱 Android Chrome:\n1. Toca el menú (⋮)\n2. Selecciona "Instalar app"\n3. Confirma la instalación';
+            } else if (/iphone|ipad/.test(userAgent) && /safari/.test(userAgent)) {
+                instructions = '🍎 iOS Safari:\n1. Toca el botón Compartir\n2. Selecciona "Agregar a pantalla principal"\n3. Confirma';
+            } else if (/chrome/.test(userAgent)) {
+                instructions = '💻 Chrome Desktop:\n1. Busca el ícono de instalación en la barra de direcciones\n2. O ve a Menú > Instalar "Bodega LANG"';
+            } else {
+                instructions = 'Tu navegador podría no soportar instalación de PWA. Intenta usar Chrome o Safari.';
+            }
+            
+            alert(`¡Instala la app en tu dispositivo!\n\n${instructions}`);
+        }
+        
+        // Detectar si ya estamos corriendo como PWA instalada
+        function isRunningStandalone() {
+            return window.matchMedia('(display-mode: standalone)').matches || 
+                   window.navigator.standalone === true;
+        }
+        
+        // Si ya está instalada, no mostrar botón de instalación
+        if (isRunningStandalone()) {
+            console.log('App ya está corriendo como PWA instalada');
+            hideInstallSection();
+        } else {
+            console.log('App corriendo en navegador');
+            // Mostrar automáticamente después de 3 segundos si es instalable
+            setTimeout(() => {
+                if (isInstallable) {
+                    showInstallSection();
+                }
+            }, 3000);
         }
         
         // Estilos para la animación de instalación
