@@ -2,8 +2,24 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Control de Bodega - L.A.N.G.</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Control de Bodega - L.A.N.G.</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Sistema de Control de Inventario y Materiales para L.A.N.G.">
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Bodega LANG">
+    <meta name="msapplication-TileColor" content="#1e3a8a">
+    
+    <!-- Manifest PWA -->
+    <link rel="manifest" href="./manifest.json">
+    
+    <!-- Preconnect para mejor rendimiento -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    
+    <!-- Estilos -->
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="retiro-styles.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -18,8 +34,8 @@
             </div>
             <form id="login-form">
                 <div class="input-group">
-                    <i class="fas fa-envelope"></i>
-<input type="text" id="username" placeholder="Nombre de usuario" required>
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="username" placeholder="Usuario" required>
                 </div>
                 <div class="input-group">
                     <i class="fas fa-lock"></i>
@@ -29,6 +45,50 @@
                     <i class="fas fa-sign-in-alt"></i> Ingresar
                 </button>
             </form>
+            
+            <!-- Usuarios de Demostración -->
+            <div class="demo-users">
+                <h3><i class="fas fa-users"></i> Usuarios Disponibles</h3>
+                <div class="user-cards">
+                    <div class="user-card admin" onclick="fillLogin('zaida.rassi@lang.com', 'ZaidaRassi2024!')">
+                        <div class="user-icon"><i class="fas fa-user-shield"></i></div>
+                        <div class="user-info">
+                            <div class="user-name">Administrador</div>
+                            <div class="user-email">zaida.rassi@lang.com</div>
+                            <div class="user-role">Acceso Completo</div>
+                        </div>
+                    </div>
+                    
+                    <div class="user-card" onclick="fillLogin('carlos@lang.com', 'Carlos2024')">
+                        <div class="user-icon"><i class="fas fa-fire"></i></div>
+                        <div class="user-info">
+                            <div class="user-name">Carlos - Soldadura</div>
+                            <div class="user-email">carlos@lang.com</div>
+                            <div class="user-role">Solicitudes</div>
+                        </div>
+                    </div>
+                    
+                    <div class="user-card" onclick="fillLogin('cristian@lang.com', 'Cristian2024')">
+                        <div class="user-icon"><i class="fas fa-bolt"></i></div>
+                        <div class="user-info">
+                            <div class="user-name">Cristian - Eléctrico</div>
+                            <div class="user-email">cristian@lang.com</div>
+                            <div class="user-role">Solicitudes</div>
+                        </div>
+                    </div>
+                    
+                    <div class="user-card" onclick="fillLogin('juan@lang.com', 'Juan2024')">
+                        <div class="user-icon"><i class="fas fa-paint-brush"></i></div>
+                        <div class="user-info">
+                            <div class="user-name">Juan - Pintura</div>
+                            <div class="user-email">juan@lang.com</div>
+                            <div class="user-role">Solicitudes</div>
+                        </div>
+                    </div>
+                </div>
+                <p class="demo-note">👆 Haz clic en cualquier usuario para iniciar sesión automáticamente</p>
+            </div>
+            
             <div id="login-error" class="error-message"></div>
         </div>
     </div>
@@ -617,5 +677,171 @@
     <script src="firebase-config.js"></script>
     
     <script src="script.js"></script>
+    
+    <!-- PWA Service Worker -->
+    <script>
+        // Registro del Service Worker para PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(function(registration) {
+                        console.log('ServiceWorker registrado correctamente:', registration.scope);
+                        
+                        // Mostrar notificación de instalación PWA
+                        let deferredPrompt;
+                        window.addEventListener('beforeinstallprompt', (e) => {
+                            e.preventDefault();
+                            deferredPrompt = e;
+                            
+                            // Mostrar botón de instalación personalizado después de login
+                            if (document.getElementById('dashboard-screen').classList.contains('active')) {
+                                showInstallButton();
+                            }
+                        });
+                        
+                        // Función para mostrar botón de instalación
+                        function showInstallButton() {
+                            if (deferredPrompt) {
+                                const installBtn = document.createElement('div');
+                                installBtn.id = 'install-pwa';
+                                installBtn.innerHTML = `
+                                    <div class="install-notification">
+                                        <i class="fas fa-mobile-alt"></i>
+                                        <span>¡Instalar como App!</span>
+                                        <button id="install-btn" class="btn btn-primary">Instalar</button>
+                                        <button id="dismiss-install" class="btn btn-secondary">×</button>
+                                    </div>
+                                `;
+                                installBtn.style.cssText = `
+                                    position: fixed;
+                                    top: 20px;
+                                    right: 20px;
+                                    z-index: 10000;
+                                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                    color: white;
+                                    padding: 15px;
+                                    border-radius: 12px;
+                                    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+                                    animation: slideIn 0.5s ease-out;
+                                `;
+                                
+                                document.body.appendChild(installBtn);
+                                
+                                // Manejar click de instalación
+                                document.getElementById('install-btn').addEventListener('click', async () => {
+                                    deferredPrompt.prompt();
+                                    const { outcome } = await deferredPrompt.userChoice;
+                                    console.log(`Resultado de instalación: ${outcome}`);
+                                    deferredPrompt = null;
+                                    installBtn.remove();
+                                });
+                                
+                                // Manejar dismissal
+                                document.getElementById('dismiss-install').addEventListener('click', () => {
+                                    installBtn.remove();
+                                });
+                                
+                                // Auto-hide después de 10 segundos
+                                setTimeout(() => {
+                                    if (installBtn.parentNode) {
+                                        installBtn.remove();
+                                    }
+                                }, 10000);
+                            }
+                        }
+                        
+                        // Mostrar cuando el usuario haga login
+                        const originalShowDashboard = window.showDashboard;
+                        if (originalShowDashboard) {
+                            window.showDashboard = function() {
+                                originalShowDashboard();
+                                setTimeout(showInstallButton, 2000);
+                            };
+                        }
+                    })
+                    .catch(function(err) {
+                        console.log('ServiceWorker falló:', err);
+                    });
+            });
+        }
+        
+        // Estilos para la animación de instalación
+        const installStyles = document.createElement('style');
+        installStyles.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            .install-notification {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 14px;
+                font-weight: 500;
+            }
+            .install-notification i {
+                font-size: 20px;
+            }
+            .install-notification button {
+                padding: 8px 12px;
+                border: none;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 12px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                transition: all 0.2s;
+            }
+            .install-notification .btn-primary {
+                background: rgba(255,255,255,0.2);
+                color: white;
+                backdrop-filter: blur(10px);
+            }
+            .install-notification .btn-primary:hover {
+                background: rgba(255,255,255,0.3);
+                transform: translateY(-1px);
+            }
+            .install-notification .btn-secondary {
+                background: rgba(0,0,0,0.2);
+                color: white;
+                padding: 4px 8px;
+                font-size: 16px;
+                border-radius: 50%;
+            }
+            .install-notification .btn-secondary:hover {
+                background: rgba(255,255,255,0.2);
+            }
+        `;
+        document.head.appendChild(installStyles);
+        
+        // Función para rellenar login automáticamente
+        window.fillLogin = function(email, password) {
+            document.getElementById('username').value = email;
+            document.getElementById('password').value = password;
+            
+            // Agregar efecto visual
+            const usernameField = document.getElementById('username');
+            const passwordField = document.getElementById('password');
+            
+            usernameField.style.background = 'rgba(16, 185, 129, 0.1)';
+            passwordField.style.background = 'rgba(16, 185, 129, 0.1)';
+            
+            // Remover el efecto después de 2 segundos
+            setTimeout(() => {
+                usernameField.style.background = '';
+                passwordField.style.background = '';
+            }, 2000);
+            
+            // Focus en el botón de login
+            document.querySelector('#login-form button[type="submit"]').focus();
+        };
+    </script>
 </body>
 </html>
